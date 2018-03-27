@@ -1,0 +1,23 @@
+version: "3"
+services:
+  app:
+    container_name: demo-scheduler
+    build: .
+    env_file: .env
+    command: "docker/rundev.sh"
+    volumes:
+      - ./:/go/src/github.com/blocksports/block-sports-scheduler
+    links:
+      - redis
+  redis: 
+    container_name: redis-db
+    image: redis:latest
+    command: ["redis-server", "--appendonly", "yes"]
+    hostname: redis
+    volumes:
+      - .:/data
+    ports:
+      - "6379:6379"
+    sysctls:
+      - net.core.somaxconn=65535
+

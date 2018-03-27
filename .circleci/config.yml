@@ -1,0 +1,122 @@
+# Golang CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-go/ for more details
+version: 2
+jobs:
+  build:
+    docker:
+      # specify the version
+      - image: 245423355509.dkr.ecr.us-west-2.amazonaws.com/blocksports-demo/api-circleci:latest
+      
+      # Specify service dependencies here if necessary
+      # CircleCI maintains a library of pre-built images
+      # documented at https://circleci.com/docs/2.0/circleci-images/
+      # - image: circleci/postgres:9.4
+    environment:
+      NAMESPACE: "blocksports-demo"
+
+    working_directory: /go/src/github.com/blocksports/block-sports-api
+    steps:
+      - checkout
+      - setup_remote_docker:
+          reusable: true
+          exclusive: false
+      - run: 
+          name: Run go dep
+          command: |
+            dep ensure
+      - run: 
+          name: Run Tests
+          command: |
+            go test -v ./...
+      - run: 
+          name: Build Docker
+          command: |
+            docker build -t app .
+      - run:
+          name: Push Docker Image to AWS ECR
+          command: |
+            if [ "${CIRCLE_BRANCH}" == "master" ]; then
+
+              TAG=$(echo $CIRCLE_SHA1 | cut -c -7)
+
+              # Login to AWS
+              aws configure set region $AWS_REGION
+              $(aws ecr get-login | sed -e 's/-e none//g')
+
+              # Tag and push docker image
+              docker tag app $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$NAMESPACE/scheduler:$TAG     
+              docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$NAMESPACE/scheduler:$TAG
+
+            fi
+      - deploy: 
+          name: Build ECS containers from images
+          command: |
+            if [ "${CIRCLE_BRANCH}" == "master" ]; then
+
+              CLUSTER="$NAMESPACE-cluster" 
+              TASK="$NAMESPACE-task"
+              SERVICE="$NAMESPACE-service" 
+              TAG=$(echo $CIRCLE_SHA1 | cut -c -7)
+
+              # Create task for docker deploy
+              task_template='[
+                {
+                  "name": "blocksports-demo",
+                  "image": "%s.dkr.ecr.%s.amazonaws.com/%s/scheduler:%s",
+                  "essential": true,
+                  "memoryReservation": 500,
+                  "cpu": 500,
+                  "environment": [
+                    {
+                      "name": "REDIS_ADDR",
+                      "value": "demo-db.hx7k2g.ng.0001.usw2.cache.amazonaws.com:6379"
+                    },
+                    {
+                      "name": "ENV",
+                      "value": "production"
+                    },
+                    {
+                      "name": "PUSHER_ID",
+                      "value": "426588"
+                    },
+                    {
+                      "name": "PUSHER_KEY",
+                      "value": "%s"
+                    },
+                    {
+                      "name": "PUSHER_SECRET",
+                      "value": "%s"
+                    },
+                    {
+                      "name": "PUSHER_CLUSTER",
+                      "value": "mt1"
+                    },
+                    {
+                      "name": "ODDS_API_KEY",
+                      "value": "%s"
+                    }
+                  ],
+                  "logConfiguration": {
+                    "logDriver": "awslogs",
+                    "options": {
+                      "awslogs-group": "bsx-demo",
+                      "awslogs-region": "us-west-2",
+                      "awslogs-stream-prefix": "demo"
+                    }
+                  }
+                }
+              ]'
+
+              container_def=$(printf "$task_template" $AWS_ACCOUNT_ID $AWS_REGION $NAMESPACE $TAG $PUSHER_KEY $PUSHER_SECRET $ODDS_API_KEY)
+              
+              # Register task definition
+              json=$(aws ecs register-task-definition --container-definitions "$container_def" --family "$TASK")
+
+              # Grab revision # using regular bash and grep
+              revision=$(echo "$json" | grep -o '"revision": [0-9]*' | grep -Eo '[0-9]+')
+
+              # Deploy revision
+              aws ecs update-service --cluster "$CLUSTER" --service "$SERVICE" --task-definition "$TASK":"$revision"
+                        
+            fi
