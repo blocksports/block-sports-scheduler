@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/robfig/cron"
+
 	"github.com/CityOfZion/neo-go-sdk/neo"
 	"github.com/go-kit/kit/log"
 	"github.com/go-redis/redis"
@@ -17,6 +19,7 @@ type Service struct {
 	PusherClient *pusher.Client
 	NeoClient    *neo.Client
 	Internals    InternalDetails
+	Cron         *cron.Cron
 }
 
 type InternalDetails struct {
@@ -32,7 +35,7 @@ type InternalDetails struct {
 
 // NewService prepares a new scheduler service
 func NewService(logger log.Logger, redisClient *redis.Client, pusherClient *pusher.Client, neoClient *neo.Client) *Service {
-	return &Service{
+	service := &Service{
 		Logger:       logger,
 		RedisClient:  redisClient,
 		PusherClient: pusherClient,
@@ -44,6 +47,10 @@ func NewService(logger log.Logger, redisClient *redis.Client, pusherClient *push
 			UpdatedAt:     time.Now(),
 		},
 	}
+
+	service.InitialiseScheduler()
+
+	return service
 }
 
 type BlockchainData struct {

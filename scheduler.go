@@ -23,7 +23,7 @@ var NodeResetTime = int64(60)
 
 var mutex = &sync.Mutex{}
 
-func (svc *Service) InitialiseScheduler() *cron.Cron {
+func (svc *Service) InitialiseScheduler() {
 	c := cron.New()
 
 	c.AddFunc("@every 1s", svc.FetchBlockchainData)
@@ -35,7 +35,7 @@ func (svc *Service) InitialiseScheduler() *cron.Cron {
 
 	c.Start()
 
-	return c
+	svc.Cron = c
 }
 
 // Fetches the current NEO block height and updates blockchain data
