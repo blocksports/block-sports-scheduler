@@ -112,7 +112,9 @@ func (svc *Service) UpdateMatchData(bestOdds BestOdds, match *Match) error {
 	}
 
 	limit := math.Pow(fnMatchedLimit(match.Scale), 0.9)
+
 	match.Matched = round.AwayFromZero(timeScale*limit*exchangeRate, 1)
+
 	if match.Matched < 0 {
 		match.Matched = 0
 	}

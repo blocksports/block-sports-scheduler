@@ -206,3 +206,15 @@ type BlockInfoResponse struct {
 	BlockHeight      int64   `json:"block_height"`
 	UpdatedAt        int64   `json:"updated_at"`
 }
+
+var SportWhitelist = map[string]bool{
+	"Soccer":             true,
+	"American Football":  true,
+	"Mixed Martial Arts": true,
+	"Basketball":         true,
+	"Cricket":            true,
+	"Ice Hockey":         true,
+	"Boxing":             true,
+	"Rugby Union":        true,
+	"Tennis":             true,
+}

@@ -57,7 +57,7 @@ func (svc *Service) FetchBlockchainData() {
 			return
 		}
 
-		svc.PushAppUpdates()
+		// svc.PushAppUpdates()
 		svc.Internals.DebugCount = 0
 	} else if svc.Internals.DebugCount > NodeResetTime {
 		svc.NeoClient.SelectBestNode() // Reselect best node
@@ -125,6 +125,8 @@ func (svc *Service) FetchMatchData() {
 		subString := competition.Sport[0:6]
 		if SoccerRegex.MatchString(subString) {
 			competition.Sport = "Soccer"
+		} else if !SportWhitelist[competition.Sport] {
+			continue
 		}
 
 		var detailResponse FetchMatchDetailResponse

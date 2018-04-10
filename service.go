@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"net/http"
 	"time"
 
 	"github.com/CityOfZion/neo-go-sdk/neo"
@@ -95,4 +96,8 @@ func (svc *Service) SetRedis(key string, v interface{}) (err error) {
 	}
 
 	return svc.RedisClient.Set(key, interfaceJSON, 0).Err()
+}
+
+func (svc *Service) HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
+	json.NewEncoder(w).Encode("OK")
 }
