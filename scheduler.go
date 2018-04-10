@@ -121,7 +121,6 @@ func (svc *Service) FetchMatchData() {
 
 	// Range over each retrieved competition/league to fetch their individual events and append event list
 	for _, competition := range response.Data {
-
 		subString := competition.Sport[0:6]
 		if SoccerRegex.MatchString(subString) {
 			competition.Sport = "Soccer"

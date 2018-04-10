@@ -54,9 +54,9 @@ func NewService(logger log.Logger, redisClient *redis.Client, pusherClient *push
 }
 
 type BlockchainData struct {
-	BlockHeight      int64     `json:"block_height"`
-	AverageBlockTime float64   `json:"average_time"`
-	UpdatedAt        time.Time `json:"updated_at"`
+	BlockHeight      int64   `json:"block_height"`
+	AverageBlockTime float64 `json:"average_time"`
+	UpdatedAt        int64   `json:"updated_at"`
 }
 
 type PriceData struct {
@@ -81,7 +81,7 @@ func (svc *Service) UpdateBlockHeight(height int64) error {
 	data := BlockchainData{
 		BlockHeight:      height,
 		AverageBlockTime: averageTime,
-		UpdatedAt:        now,
+		UpdatedAt:        now.Unix(),
 	}
 
 	return svc.SetRedis("blockchain_data", &data)
