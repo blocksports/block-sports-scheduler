@@ -63,7 +63,7 @@ jobs:
               task_template='[
                 {
                   "name": "blocksports-demo",
-                  "image": "%s.dkr.ecr.%s.amazonaws.com/%s/scheduler:%s",
+                  "image": "%s.dkr.ecr.%s.amazonaws.com/blocksports-demo/scheduler:%s",
                   "essential": true,
                   "memoryReservation": 500,
                   "cpu": 500,
@@ -102,13 +102,13 @@ jobs:
                     "options": {
                       "awslogs-group": "bsx-demo",
                       "awslogs-region": "us-west-2",
-                      "awslogs-stream-prefix": "demo"
+                      "awslogs-stream-prefix": "demo-scheduler"
                     }
                   }
                 }
               ]'
 
-              container_def=$(printf "$task_template" $AWS_ACCOUNT_ID $AWS_REGION $NAMESPACE $TAG $PUSHER_KEY $PUSHER_SECRET $ODDS_API_KEY)
+              container_def=$(printf "$task_template" $AWS_ACCOUNT_ID $AWS_REGION $TAG $PUSHER_KEY $PUSHER_SECRET $ODDS_API_KEY)
               
               # Register task definition
               json=$(aws ecs register-task-definition --container-definitions "$container_def" --family "$TASK")
