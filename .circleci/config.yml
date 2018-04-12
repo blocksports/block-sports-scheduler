@@ -82,7 +82,7 @@ jobs:
                     },
                     {
                       "name": "PUSHER_ID",
-                      "value": "426588"
+                      "value": "%s"
                     },
                     {
                       "name": "PUSHER_KEY",
@@ -112,7 +112,7 @@ jobs:
                 }
               ]'
 
-              container_def=$(printf "$task_template" $AWS_ACCOUNT_ID $AWS_REGION $TAG $PUSHER_KEY $PUSHER_SECRET $ODDS_API_KEY)
+              container_def=$(printf "$task_template" $AWS_ACCOUNT_ID $AWS_REGION $TAG $PUSHER_ID_PROD $PUSHER_KEY_PROD $PUSHER_SECRET_PROD $ODDS_API_KEY)
               
               # Register task definition
               json=$(aws ecs register-task-definition --container-definitions "$container_def" --family "$TASK")
