@@ -73,6 +73,10 @@ jobs:
                       "value": "demo-db.hx7k2g.ng.0001.usw2.cache.amazonaws.com:6379"
                     },
                     {
+                      "name": "SERVICE_ADDR",
+                      "value": ":5000"
+                    },
+                    {
                       "name": "ENV",
                       "value": "production"
                     },
