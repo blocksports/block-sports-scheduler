@@ -87,15 +87,6 @@ func (svc *Service) UpdateBlockHeight(height int64) error {
 	return svc.SetRedis("blockchain_data", &data)
 }
 
-func (svc *Service) GetRedis(key string, v interface{}) (err error) {
-	interfaceRaw, err := svc.RedisClient.Get(key).Bytes()
-	if err != nil {
-		return
-	}
-
-	return json.Unmarshal(interfaceRaw, v)
-}
-
 func (svc *Service) SetRedis(key string, v interface{}) (err error) {
 	interfaceJSON, err := json.Marshal(v)
 	if err != nil {
@@ -103,6 +94,16 @@ func (svc *Service) SetRedis(key string, v interface{}) (err error) {
 	}
 
 	return svc.RedisClient.Set(key, interfaceJSON, 0).Err()
+}
+
+func (svc *Service) GetRedis(key string, v interface{}) (err error) {
+	interfaceRaw, err := svc.RedisClient.Get(key).Bytes()
+	if err != nil {
+		return
+	}
+
+	err = json.Unmarshal(interfaceRaw, v)
+	return
 }
 
 func (svc *Service) HealthCheckHandler(w http.ResponseWriter, r *http.Request) {

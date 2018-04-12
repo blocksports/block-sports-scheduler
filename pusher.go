@@ -22,14 +22,14 @@ func (svc *Service) PushAppUpdates() {
 	start := time.Now()
 
 	var sportMatches map[string][]Match
-	err := svc.RedisGetInterface("sport-matches", &sportMatches)
+	err := svc.GetRedis("sport-matches", &sportMatches)
 	if err != nil {
 		svc.Logger.Log("error", err.Error())
 		return
 	}
 
 	var competitionMatches map[string][]Match
-	err = svc.RedisGetInterface("competition-matches", &competitionMatches)
+	err = svc.GetRedis("competition-matches", &competitionMatches)
 	if err != nil {
 		svc.Logger.Log("error", err.Error())
 		return

@@ -57,7 +57,7 @@ func (svc *Service) FetchBlockchainData() {
 			return
 		}
 
-		// svc.PushAppUpdates()
+		svc.PushAppUpdates()
 		svc.Internals.DebugCount = 0
 	} else if svc.Internals.DebugCount > NodeResetTime {
 		svc.NeoClient.SelectBestNode() // Reselect best node
@@ -267,37 +267,37 @@ func (svc *Service) FetchMatchData() {
 	sort.Sort(SportByKey(sportKeys))
 	sort.Sort(BySportIndex(navigation.Sports))
 
-	err := svc.RedisSetInterface("all-matches", &matches)
+	err := svc.SetRedis("all-matches", &matches)
 	if err != nil {
 		svc.Logger.Log("error", err.Error())
 		return
 	}
 
-	err = svc.RedisSetInterface("sport-matches", &sportMatches)
+	err = svc.SetRedis("sport-matches", &sportMatches)
 	if err != nil {
 		svc.Logger.Log("error", err.Error())
 		return
 	}
 
-	err = svc.RedisSetInterface("competition-matches", &competitionMatches)
+	err = svc.SetRedis("competition-matches", &competitionMatches)
 	if err != nil {
 		svc.Logger.Log("error", err.Error())
 		return
 	}
 
-	err = svc.RedisSetInterface("competition-detail", &competitionOverview)
+	err = svc.SetRedis("competition-detail", &competitionOverview)
 	if err != nil {
 		svc.Logger.Log("error", err.Error())
 		return
 	}
 
-	err = svc.RedisSetInterface("competition-amounts", &competitionMatched)
+	err = svc.SetRedis("competition-amounts", &competitionMatched)
 	if err != nil {
 		svc.Logger.Log("error", err.Error())
 		return
 	}
 
-	err = svc.RedisSetInterface("navigation", &navigation)
+	err = svc.SetRedis("navigation", &navigation)
 	if err != nil {
 		svc.Logger.Log("error", err.Error())
 		return
@@ -305,7 +305,7 @@ func (svc *Service) FetchMatchData() {
 
 	svc.Internals.SportKeys = sportKeys
 
-	err = svc.RedisSetInterface("sport-keys", &sportKeys)
+	err = svc.SetRedis("sport-keys", &sportKeys)
 	if err != nil {
 		svc.Logger.Log("error", err.Error())
 		return
@@ -317,35 +317,35 @@ func (svc *Service) FetchMatchData() {
 func (svc *Service) RecalculateMatchData() {
 
 	var allMatches []Match
-	err := svc.RedisGetInterface("all-matches", &allMatches)
+	err := svc.GetRedis("all-matches", &allMatches)
 	if err != nil {
 		svc.Logger.Log("error", err.Error())
 		return
 	}
 
 	var sportMatches map[string][]Match
-	err = svc.RedisGetInterface("sport-matches", &sportMatches)
+	err = svc.GetRedis("sport-matches", &sportMatches)
 	if err != nil {
 		svc.Logger.Log("error", err.Error())
 		return
 	}
 
 	var competitionMatches map[string][]Match
-	err = svc.RedisGetInterface("competition-matches", &competitionMatches)
+	err = svc.GetRedis("competition-matches", &competitionMatches)
 	if err != nil {
 		svc.Logger.Log("error", err.Error())
 		return
 	}
 
 	var competitionDetail map[string]CompetitionInfo
-	err = svc.RedisGetInterface("competition-detail", &competitionDetail)
+	err = svc.GetRedis("competition-detail", &competitionDetail)
 	if err != nil {
 		svc.Logger.Log("error", err.Error())
 		return
 	}
 
 	var competitionAmounts map[string]float64
-	err = svc.RedisGetInterface("competition-amounts", &competitionAmounts)
+	err = svc.GetRedis("competition-amounts", &competitionAmounts)
 	if err != nil {
 		svc.Logger.Log("error", err.Error())
 		return
@@ -413,31 +413,31 @@ func (svc *Service) RecalculateMatchData() {
 		sportMatches[sport] = matches
 	}
 
-	err = svc.RedisSetInterface("all-matches", &allMatches)
+	err = svc.SetRedis("all-matches", &allMatches)
 	if err != nil {
 		svc.Logger.Log("error", err.Error())
 		return
 	}
 
-	err = svc.RedisSetInterface("sport-matches", &sportMatches)
+	err = svc.SetRedis("sport-matches", &sportMatches)
 	if err != nil {
 		svc.Logger.Log("error", err.Error())
 		return
 	}
 
-	err = svc.RedisSetInterface("competition-matches", &competitionMatches)
+	err = svc.SetRedis("competition-matches", &competitionMatches)
 	if err != nil {
 		svc.Logger.Log("error", err.Error())
 		return
 	}
 
-	err = svc.RedisSetInterface("competition-detail", &competitionDetail)
+	err = svc.SetRedis("competition-detail", &competitionDetail)
 	if err != nil {
 		svc.Logger.Log("error", err.Error())
 		return
 	}
 
-	err = svc.RedisSetInterface("competition-amounts", &competitionAmounts)
+	err = svc.SetRedis("competition-amounts", &competitionAmounts)
 	if err != nil {
 		svc.Logger.Log("error", err.Error())
 		return

@@ -48,26 +48,6 @@ func EncodeResponse(w http.ResponseWriter, response interface{}) {
 	w.Write(responseEncoded)
 }
 
-func (svc *Service) RedisGetInterface(key string, v interface{}) (err error) {
-	interfaceRaw, err := svc.RedisClient.Get(key).Bytes()
-	if err != nil {
-		return
-	}
-
-	err = json.Unmarshal(interfaceRaw, v)
-	return
-}
-
-func (svc *Service) RedisSetInterface(key string, v interface{}) (err error) {
-	interfaceJSON, err := json.Marshal(v)
-	if err != nil {
-		return
-	}
-
-	err = svc.RedisClient.Set(key, interfaceJSON, 0).Err()
-	return
-}
-
 func TruncateMatches(matches []Match, amount int) []Match {
 	truncatedMatches := make([]Match, 0)
 	for index, match := range matches {
