@@ -240,3 +240,26 @@ func addNormalNoise(variance float64) float64 {
 	r := rand.NormFloat64()
 	return r * variance
 }
+
+func GetScale(key string) float64 {
+	// Seed rand from match name for consistency
+	hashBytes := sha1.Sum([]byte(key))
+	seed := binary.BigEndian.Uint64(hashBytes[:])
+	source := rand.NewSource(int64(seed))
+	r := rand.New(source)
+	scale := round.ToEven(r.Float64(), 3)
+
+	return scale
+}
+
+func GetTimeScale(unixTime int64) float64 {
+	fnTimeScale := makeSigmoidal([4]float64{1, 0.2851116, 96440480000, -19.12504}) // Grows to 1 as x -> 0
+
+	timeTo := unixTime - time.Now().Unix()
+	if timeTo < 0 {
+		timeTo = 0
+	}
+	timeScale := fnTimeScale(float64(timeTo))
+
+	return timeScale
+}

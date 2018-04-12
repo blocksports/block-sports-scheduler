@@ -2,18 +2,13 @@ package service
 
 import (
 	"bytes"
-	"crypto/sha1"
 	"encoding/base64"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"net/http"
 	"sort"
-	"time"
 
-	"github.com/a-h/round"
 	"github.com/klauspost/compress/zlib"
 	"golang.org/x/text/transform"
 	"golang.org/x/text/unicode/norm"
@@ -99,27 +94,4 @@ func WriteDataToJSONFile(filename string, data interface{}) (err error) {
 	dataJSON, _ := json.Marshal(data)
 	err = ioutil.WriteFile(filename+".json", dataJSON, 0644)
 	return
-}
-
-func GetScale(key string) float64 {
-	// Seed rand from match name for consistency
-	hashBytes := sha1.Sum([]byte(key))
-	seed := binary.BigEndian.Uint64(hashBytes[:])
-	source := rand.NewSource(int64(seed))
-	r := rand.New(source)
-	scale := round.ToEven(r.Float64(), 3)
-
-	return scale
-}
-
-func GetTimeScale(unixTime int64) float64 {
-	fnTimeScale := makeSigmoidal([4]float64{1, 0.2851116, 96440480000, -19.12504}) // Grows to 1 as x -> 0
-
-	timeTo := unixTime - time.Now().Unix()
-	if timeTo < 0 {
-		timeTo = 0
-	}
-	timeScale := fnTimeScale(float64(timeTo))
-
-	return timeScale
 }
