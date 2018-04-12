@@ -45,8 +45,8 @@ jobs:
               $(aws ecr get-login | sed -e 's/-e none//g')
 
               # Tag and push docker image
-              docker tag app $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$NAMESPACE/scheduler:$TAG     
-              docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$NAMESPACE/scheduler:$TAG
+              docker tag app $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/blocksports-demo/scheduler:$TAG     
+              docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/blocksports-demo/scheduler:$TAG
 
             fi
       - deploy: 
