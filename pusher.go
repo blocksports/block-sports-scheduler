@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
-	"time"
 )
 
 type AppUpdateMessage struct {
@@ -19,8 +18,6 @@ type AppUpdateMessage struct {
 const MaxResult = 25
 
 func (svc *Service) PushAppUpdates() {
-	start := time.Now()
-
 	var sportMatches map[string][]Match
 	err := svc.GetRedis("sport-matches", &sportMatches)
 	if err != nil {
@@ -47,9 +44,6 @@ func (svc *Service) PushAppUpdates() {
 	}
 
 	go svc.PushFPUpdate(sportMatches)
-
-	elapsed := time.Since(start)
-	svc.Logger.Log("test", fmt.Sprintf("loop took %s", elapsed))
 
 	return
 }

@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/parnurzeal/gorequest"
 	"github.com/robfig/cron"
@@ -129,7 +128,7 @@ func (svc *Service) FetchMatchData() {
 		}
 
 		var detailResponse FetchMatchDetailResponse
-		_, _, errs := gorequest.New().
+		resp, _, errs := gorequest.New().
 			Get(fmt.Sprintf("https://api.the-odds-api.com/v2/odds/?apiKey=%s&sport=%s&region=au", OddsAPIKey, competition.ID)).
 			EndStruct(&detailResponse)
 		if errs != nil {
@@ -138,6 +137,8 @@ func (svc *Service) FetchMatchData() {
 			// continue
 			break
 		}
+
+		svc.Logger.Log("test", fmt.Sprintf("%s - %s, Requests used: %s, Requests remaining: %s", competition.Sport, competition.Name, resp.Header.Get("X-Requests-Used"), resp.Header.Get("X-Requests-Remaining")))
 
 		sportID := strings.Replace(strings.ToLower(competition.Sport), " ", "-", -1)
 		competitionID := strings.Replace(strings.ToLower(competition.ID), "_", "-", -1)
@@ -351,8 +352,6 @@ func (svc *Service) RecalculateMatchData() {
 		return
 	}
 
-	start := time.Now()
-
 	for competition, matches := range competitionMatches {
 		if len(matches) < 1 {
 			return
@@ -442,9 +441,6 @@ func (svc *Service) RecalculateMatchData() {
 		svc.Logger.Log("error", err.Error())
 		return
 	}
-
-	elapsed := time.Since(start)
-	svc.Logger.Log("test", fmt.Sprintf("loop took %s", elapsed))
 
 }
 
