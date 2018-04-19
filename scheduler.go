@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -16,17 +15,10 @@ import (
 	"github.com/robfig/cron"
 )
 
-var OddsAPIKey = os.Getenv("ODDS_API_KEY")
-
 var JSONOddsAPIKey = os.Getenv("JSON_ODDS_API_KEY")
-
-var SoccerRegex = regexp.MustCompile("Soccer")
 
 // Time to wait for a block update until we reselect the best node
 var NodeResetTime = int64(60)
-
-// Arbitrary date time
-var firstDate = 9999999999
 
 var mutex = &sync.Mutex{}
 
@@ -134,7 +126,7 @@ func (svc *Service) FetchEventData() {
 
 	for _, event := range response {
 
-		// Skip if we haven't whitelisted the sport/league
+		// Skip if we haven't whitelisted the sport
 		if _, ok := SportDetailMap[event.Sport]; !ok {
 			continue
 		}
@@ -142,8 +134,22 @@ func (svc *Service) FetchEventData() {
 		sportDetail := SportDetailMap[event.Sport]
 
 		if sportDetail.SportID == "soccer" {
-			sportDetail.Competition = stripCtlAndExtFromUnicode(event.League)
-			sportDetail.CompetitionID = strings.Replace(strings.ToLower(event.League), " ", "-", -1)
+			league := stripCtlAndExtFromUnicode(event.League)
+			if league == "Ligue 1" || league == "Ligue 2" {
+				league = "French " + league
+			} else if league == "La Liga" {
+				league = "Spanish La Liga"
+			} else if league == "World Cup" {
+				league = "2018 FIFA World Cup"
+			}
+
+			sportDetail.Competition = league
+			sportDetail.CompetitionID = strings.Replace(strings.ToLower(league), " ", "-", -1)
+
+			if !LeagueWhitelist[sportDetail.CompetitionID] {
+				continue
+			}
+
 		} else if sportDetail.Competition == "" {
 			// Mark for later
 			sportDetail.Competition = sportDetail.Sport
@@ -245,6 +251,8 @@ func (svc *Service) FetchEventData() {
 	// Not the greatest solution :~)
 	var sportKeys []SportKey
 	for _, sport := range sports {
+		sort.Sort(ByAlphabetical(sport.Competitions))
+
 		navigation.Sports = append(navigation.Sports, *sport)
 		var index int
 		// In case we get sports that we haven't indexed we have to do this

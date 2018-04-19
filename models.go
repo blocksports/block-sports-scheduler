@@ -1,6 +1,9 @@
 package service
 
-import "strconv"
+import (
+	"sort"
+	"strconv"
+)
 
 type EventData struct {
 	ID        string      `json:"ID"`
@@ -56,6 +59,21 @@ type Competition struct {
 	Name  string `json:"name"`
 	Sport string `json:"sport"`
 	Count int    `json:"count"`
+}
+
+type ByAlphabetical []Competition
+
+func (c ByAlphabetical) Len() int      { return len(c) }
+func (c ByAlphabetical) Swap(i, j int) { c[i], c[j] = c[j], c[i] }
+func (c ByAlphabetical) Less(i, j int) bool {
+	a := c[i].ID
+	b := c[j].ID
+
+	AB := []string{a, b}
+
+	sort.Strings(AB)
+
+	return AB[0] == a
 }
 
 type CompetitionInfo struct {
@@ -306,4 +324,23 @@ var SportDetailMap = map[int]SportDetail{
 		Competition:   "CFL",
 		CompetitionID: "cfl",
 	},
+}
+
+var LeagueWhitelist = map[string]bool{
+	"english-premier-league": true,
+	"australian-a-league":    true,
+	"2018-fifa-world-cup":    true,
+	"italian-serie-a":        true,
+	"south-korean-k-league":  true,
+	"english-league-1":       true,
+	"english-league-2":       true,
+	"j-league":               true,
+	"major-league-soccer":    true,
+	"french-ligue-1":         true,
+	"bundesliga":             true,
+	"brazil-serie-a":         true,
+	"spanish-la-liga":        true,
+	"english-fa-cup":         true,
+	"scottish-premiership":   true,
+	"premier-division":       true,
 }
