@@ -97,7 +97,7 @@ jobs:
                       "value": "mt1"
                     },
                     {
-                      "name": "ODDS_API_KEY",
+                      "name": "JSON_ODDS_API_KEY",
                       "value": "%s"
                     }
                   ],
@@ -112,7 +112,7 @@ jobs:
                 }
               ]'
 
-              container_def=$(printf "$task_template" $AWS_ACCOUNT_ID $AWS_REGION $TAG $PUSHER_ID_PROD $PUSHER_KEY_PROD $PUSHER_SECRET_PROD $ODDS_API_KEY)
+              container_def=$(printf "$task_template" $AWS_ACCOUNT_ID $AWS_REGION $TAG $PUSHER_ID_PROD $PUSHER_KEY_PROD $PUSHER_SECRET_PROD $JSON_ODDS_API_KEY)
               
               # Register task definition
               json=$(aws ecs register-task-definition --container-definitions "$container_def" --family "$TASK")
