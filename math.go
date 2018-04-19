@@ -35,49 +35,80 @@ func GenerateSeededID(matchName, matchDate string) string {
 	return strings.Replace(encoded, "/", "a", -1)
 }
 
-// GetBestOdds gets the best odds as averaged from the aggregated sites
-func (svc *Service) GetBestOdds(match Match, sites map[string]OASite) BestOdds {
+func GetOdds(match Match, odds EventOdds) BestOdds {
 	numOutcomes := match.Outcomes
 	scale := match.Scale
 
 	fnLayDifference := makeLogistical([4]float64{186.2695, 4.2213, 29.5378, -0.07})
-	numSites := [][]float64{{0, 0, 0}, {0, 0, 0}}
+	layDifference := fnLayDifference(scale) / 2
+
 	backOdds := make([]float64, numOutcomes)
 	layOdds := make([]float64, numOutcomes)
 
-	for _, site := range sites {
-		for i := 0; i < numOutcomes; i++ {
-			if len(site.Odds.Back) == numOutcomes {
-				backFloat, err := strconv.ParseFloat(site.Odds.Back[i], 32)
-				if err == nil {
-					backOdds[i] += backFloat
-					numSites[0][i]++
-				}
-			}
-		}
-	}
+	homeOdds := ConvertMoneylineOdds(odds.HomeOdds)
+	awayOdds := ConvertMoneylineOdds(odds.AwayOdds)
+	drawOdds := ConvertMoneylineOdds(odds.DrawOdds)
 
 	for i := 0; i < numOutcomes; i++ {
-		backOdds[i] /= numSites[0][i]
-		if math.IsNaN(backOdds[i]) {
-			backOdds[i] = 0
-			layOdds[i] = 0
-			continue
+		switch i {
+		case 0:
+			backOdds[i] = homeOdds
+		case 1:
+			backOdds[i] = awayOdds
+		case 2:
+			backOdds[i] = drawOdds
 		}
-
-		layDifference := fnLayDifference(scale) / 2
 
 		layOdds[i] = backOdds[i] + layDifference + addNormalNoise(layDifference)
 		if layOdds[i]-backOdds[i] < 0.01 {
 			layOdds[i] = backOdds[i] + 0.01
 		}
-
 	}
 
 	return BestOdds{
 		Back: backOdds,
 		Lay:  layOdds,
 	}
+}
+
+func FindBestOdds(match Match) BestOdds {
+	backOdds := match.MatchOdds.Back
+	var bestBackOdds []float64
+	if len(backOdds) > 0 {
+		for _, value := range backOdds {
+			if len(value) > 0 {
+				bestBackOdds = append(bestBackOdds, value[0].Odds)
+			}
+		}
+	}
+
+	layOdds := match.MatchOdds.Lay
+	var bestLayOdds []float64
+	if len(layOdds) > 0 {
+		for _, value := range layOdds {
+			if len(value) > 0 {
+				bestLayOdds = append(bestLayOdds, value[0].Odds)
+			}
+		}
+	}
+
+	bestOdds := BestOdds{
+		Back: bestBackOdds,
+		Lay:  bestLayOdds,
+	}
+
+	return bestOdds
+}
+
+func ConvertMoneylineOdds(odds string) float64 {
+	floatOdds, _ := strconv.ParseFloat(odds, 64)
+	if floatOdds > 0 {
+		floatOdds = floatOdds/100 + 1
+	} else if floatOdds < 0 {
+		floatOdds = 100/-floatOdds + 1
+	}
+
+	return round.ToEven(floatOdds, 2)
 }
 
 // UpdateMatchData generates odds and matched amounts based on the current best odds, randomness and ~maths~

@@ -2,57 +2,20 @@ package service
 
 import "strconv"
 
-type FetchMatchDataResponse struct {
-	Success bool            `json:"success"`
-	Data    []OACompetition `json:"data"`
+type EventData struct {
+	ID        string      `json:"ID"`
+	Home      string      `json:"HomeTeam"`
+	Away      string      `json:"AwayTeam"`
+	MatchTime string      `json:"MatchTime"`
+	League    string      `json:"DisplayLeague"`
+	Sport     int         `json:"Sport"`
+	Odds      []EventOdds `json:"Odds"`
 }
 
-type FetchMatchDetailResponse struct {
-	Success bool        `json:"success"`
-	Data    OAMatchList `json:"data"`
-}
-
-type TestResponse struct {
-	Success bool                   `json:"success"`
-	Data    map[string]interface{} `json:"data"`
-}
-type OACompetition struct {
-	ID    string `json:"sport"`
-	Sport string `json:"sport_group"`
-	Name  string `json:"display_name"`
-}
-
-type OAMatchList struct {
-	Info   OAMatchInfo        `json:"info"`
-	Events map[string]OAEvent `json:"events"`
-}
-
-type OAMatchInfo struct {
-	Sport     string
-	Name      string `json:"display_name"`
-	Outcomes  string `json:"num_outcomes"`
-	UpdatedAt int    `json:"check_dt,omitempty"`
-}
-
-type OAEvent struct {
-	Name            string            `json:"name"`
-	Sport           string            `json:"sport_name"`
-	Competition     string            `json:"sport"`
-	CompetitionName string            `json:"sport_display"`
-	Participants    []string          `json:"participants"`
-	StartDate       string            `json:"commence"`
-	Status          string            `json:"status"`
-	Sites           map[string]OASite `json:"sites"`
-}
-
-type OASite struct {
-	Odds      OAOdds `json:"odds"`
-	UpdatedAt int    `json:"last_update"`
-}
-
-type OAOdds struct {
-	Back []string `json:"h2h"`
-	Lay  []string `json:"h2h_lay,omitempty"`
+type EventOdds struct {
+	HomeOdds string `json:"MoneyLineHome"`
+	AwayOdds string `json:"MoneyLineAway"`
+	DrawOdds string `json:"DrawLine"`
 }
 
 type Navigation struct {
@@ -192,13 +155,15 @@ func (s SportByKey) Less(i, j int) bool {
 }
 
 var SportOrder = map[string]int{
-	"soccer":             1,
-	"american-football":  2,
-	"mixed-martial-arts": 3,
-	"basketball":         4,
-	"cricket":            5,
-	"ice-hockey":         6,
-	"boxing":             7,
+	"soccer":            1,
+	"american-football": 2,
+	"mma":               3,
+	"basketball":        4,
+	"cricket":           5,
+	"baseball":          6,
+	"ice-hockey":        7,
+	"boxing":            8,
+	"rugby-union":       9,
 }
 
 type BlockInfoResponse struct {
@@ -207,14 +172,138 @@ type BlockInfoResponse struct {
 	UpdatedAt        int64   `json:"updated_at"`
 }
 
-var SportWhitelist = map[string]bool{
-	"Soccer":             true,
-	"American Football":  true,
-	"Mixed Martial Arts": true,
-	"Basketball":         true,
-	"Cricket":            true,
-	"Ice Hockey":         true,
-	"Boxing":             true,
-	"Rugby Union":        true,
-	"Tennis":             true,
+type SportDetail struct {
+	Sport         string
+	SportID       string
+	Competition   string
+	CompetitionID string
+}
+
+var SportDetailMap = map[int]SportDetail{
+	0: SportDetail{
+		Sport:         "Baseball",
+		SportID:       "baseball",
+		Competition:   "MLB",
+		CompetitionID: "mlb",
+	},
+	1: SportDetail{
+		Sport:         "Basketball",
+		SportID:       "basketball",
+		Competition:   "NBA",
+		CompetitionID: "nba",
+	},
+	2: SportDetail{
+		Sport:         "Basketball",
+		SportID:       "basketball",
+		Competition:   "NCAAB",
+		CompetitionID: "ncaab",
+	},
+	3: SportDetail{
+		Sport:         "American Football",
+		SportID:       "american-football",
+		Competition:   "NCAAF",
+		CompetitionID: "ncaaf",
+	},
+	4: SportDetail{
+		Sport:         "American Football",
+		SportID:       "american-football",
+		Competition:   "NFL",
+		CompetitionID: "nfl",
+	},
+	5: SportDetail{
+		Sport:         "Ice Hockey",
+		SportID:       "ice-hockey",
+		Competition:   "NHL",
+		CompetitionID: "nhl",
+	},
+	7: SportDetail{
+		Sport:         "Soccer",
+		SportID:       "soccer",
+		Competition:   "",
+		CompetitionID: "",
+	},
+	8: SportDetail{
+		Sport:         "Basketball",
+		SportID:       "basketball",
+		Competition:   "WNBA",
+		CompetitionID: "wnba",
+	},
+	9: SportDetail{
+		Sport:         "Tennis",
+		SportID:       "tennis",
+		Competition:   "",
+		CompetitionID: "",
+	},
+	10: SportDetail{
+		Sport:         "Boxing",
+		SportID:       "boxing",
+		Competition:   "",
+		CompetitionID: "",
+	},
+	11: SportDetail{
+		Sport:         "Mixed Martial Arts",
+		SportID:       "mma",
+		Competition:   "",
+		CompetitionID: "",
+	},
+	12: SportDetail{
+		Sport:         "Cricket",
+		SportID:       "cricket",
+		Competition:   "",
+		CompetitionID: "",
+	},
+	14: SportDetail{
+		Sport:         "Ice Hockey",
+		SportID:       "ice-hockey",
+		Competition:   "KHL",
+		CompetitionID: "khl",
+	},
+	15: SportDetail{
+		Sport:         "Ice Hockey",
+		SportID:       "ice-hockey",
+		Competition:   "AHL",
+		CompetitionID: "ahl",
+	},
+	16: SportDetail{
+		Sport:         "Ice Hockey",
+		SportID:       "ice-hockey",
+		Competition:   "SHL",
+		CompetitionID: "shl",
+	},
+	18: SportDetail{
+		Sport:         "Baseball",
+		SportID:       "baseball",
+		Competition:   "LMP",
+		CompetitionID: "lmp",
+	},
+	19: SportDetail{
+		Sport:         "Baseball",
+		SportID:       "baseball",
+		Competition:   "NPB",
+		CompetitionID: "npb",
+	},
+	20: SportDetail{
+		Sport:         "Baseball",
+		SportID:       "baseball",
+		Competition:   "KBO",
+		CompetitionID: "kbo",
+	},
+	22: SportDetail{
+		Sport:         "Rugby Union",
+		SportID:       "rugby-union",
+		Competition:   "",
+		CompetitionID: "",
+	},
+	23: SportDetail{
+		Sport:         "Baseball",
+		SportID:       "baseball",
+		Competition:   "WBC",
+		CompetitionID: "wbc",
+	},
+	24: SportDetail{
+		Sport:         "American Football",
+		SportID:       "american-football",
+		Competition:   "CFL",
+		CompetitionID: "cfl",
+	},
 }

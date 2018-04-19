@@ -1,13 +1,16 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/parnurzeal/gorequest"
 	"github.com/robfig/cron"
@@ -15,10 +18,15 @@ import (
 
 var OddsAPIKey = os.Getenv("ODDS_API_KEY")
 
+var JSONOddsAPIKey = os.Getenv("JSON_ODDS_API_KEY")
+
 var SoccerRegex = regexp.MustCompile("Soccer")
 
 // Time to wait for a block update until we reselect the best node
 var NodeResetTime = int64(60)
+
+// Arbitrary date time
+var firstDate = 9999999999
 
 var mutex = &sync.Mutex{}
 
@@ -28,9 +36,10 @@ func (svc *Service) InitialiseScheduler() {
 	c.AddFunc("@every 1s", svc.FetchBlockchainData)
 	c.AddFunc("@every 5s", svc.FetchPriceData)
 	c.AddFunc("@every 10s", svc.RecalculateMatchData)
-	c.AddFunc("@every 60m", svc.FetchMatchData)
+	c.AddFunc("@every 15m", svc.FetchEventData)
 
-	svc.FetchMatchData()
+	svc.FetchPriceData()
+	svc.FetchEventData()
 
 	c.Start()
 
@@ -65,6 +74,7 @@ func (svc *Service) FetchBlockchainData() {
 
 	mutex.Unlock()
 }
+
 func (svc *Service) FetchPriceData() {
 	var response map[string]Currency
 
@@ -91,23 +101,27 @@ func (svc *Service) FetchPriceData() {
 
 }
 
-func (svc *Service) FetchMatchData() {
-	var response FetchMatchDataResponse
+func (svc *Service) FetchEventData() {
+	var response []EventData
 	_, _, errs := gorequest.New().
-		Get(fmt.Sprintf("https://api.the-odds-api.com/v2/sports/?apiKey=%s", OddsAPIKey)).
+		Get(fmt.Sprintf("https://jsonodds.com/api/odds/?oddType=game")).
+		Set("x-api-key", JSONOddsAPIKey).
 		EndStruct(&response)
 	if errs != nil {
 		err := aggregateErrors("Unable to fetch match data", errs)
 		svc.Logger.Log("error", err.Error())
-		svc.Logger.Log("error", response)
 		return
 	}
 
-	var errors []error
-	var events []OAEvent
-	var navigation Navigation
+	responseJSON, _ := json.Marshal(response)
+	err := ioutil.WriteFile("event-list.json", responseJSON, 0644)
+	if err != nil {
+		svc.Logger.Log("error", fmt.Sprintf("Unable to write match list to file: %s", err.Error()))
+		return
+	}
 
 	var matches []Match
+	var navigation Navigation
 
 	sportMatches := make(map[string][]Match)
 	competitionMatches := make(map[string][]Match)
@@ -115,137 +129,120 @@ func (svc *Service) FetchMatchData() {
 	competitions := make(map[string]*Competition)
 	sports := make(map[string]*Sport)
 
-	competitionOverview := make(map[string]CompetitionInfo)
+	competitionOverview := make(map[string]*CompetitionInfo)
 	competitionMatched := make(map[string]float64)
 
-	// Range over each retrieved competition/league to fetch their individual events and append event list
-	for _, competition := range response.Data {
-		subString := competition.Sport[0:6]
-		if SoccerRegex.MatchString(subString) {
-			competition.Sport = "Soccer"
-		} else if !SportWhitelist[competition.Sport] {
+	for _, event := range response {
+
+		// Skip if we haven't whitelisted the sport/league
+		if _, ok := SportDetailMap[event.Sport]; !ok {
 			continue
 		}
 
-		var detailResponse FetchMatchDetailResponse
-		resp, _, errs := gorequest.New().
-			Get(fmt.Sprintf("https://api.the-odds-api.com/v2/odds/?apiKey=%s&sport=%s&region=au", OddsAPIKey, competition.ID)).
-			EndStruct(&detailResponse)
-		if errs != nil {
-			err := aggregateErrors("Unable to fetch match data", errs)
-			errors = append(errors, err)
-			// continue
-			break
+		sportDetail := SportDetailMap[event.Sport]
+
+		if sportDetail.SportID == "soccer" {
+			sportDetail.Competition = stripCtlAndExtFromUnicode(event.League)
+			sportDetail.CompetitionID = strings.Replace(strings.ToLower(event.League), " ", "-", -1)
+		} else if sportDetail.Competition == "" {
+			// Mark for later
+			sportDetail.Competition = sportDetail.Sport
+			sportDetail.CompetitionID = sportDetail.SportID
 		}
 
-		svc.Logger.Log("test", fmt.Sprintf("%s - %s, Requests used: %s, Requests remaining: %s", competition.Sport, competition.Name, resp.Header.Get("X-Requests-Used"), resp.Header.Get("X-Requests-Remaining")))
+		event.Home = stripCtlAndExtFromUnicode(event.Home)
+		event.Away = stripCtlAndExtFromUnicode(event.Away)
 
-		sportID := strings.Replace(strings.ToLower(competition.Sport), " ", "-", -1)
-		competitionID := strings.Replace(strings.ToLower(competition.ID), "_", "-", -1)
+		name := event.Home + string("_") + event.Away
 
-		totalMatched := float64(0)
-		firstDate := 9999999999
-
-		// Iterate over each event, retrieve nav info and append to global event array
-		for key, event := range detailResponse.Data.Events {
-			if competitions[competition.ID] == nil {
-				competitions[competition.ID] = &Competition{
-					ID:    competitionID,
-					Name:  competition.Name,
-					Sport: competition.Sport,
-					Count: 1,
-				}
-			} else {
-				competitions[competition.ID].Count++
-			}
-
-			if sports[competition.Sport] == nil {
-				sports[competition.Sport] = &Sport{
-					ID:           sportID,
-					Name:         competition.Sport,
-					Count:        1,
-					Competitions: []Competition{},
-				}
-			} else {
-				sports[competition.Sport].Count++
-			}
-
-			numOutcomes, err := strconv.Atoi(detailResponse.Data.Info.Outcomes)
-			if err != nil {
-				svc.Logger.Log("error", fmt.Sprintf("Unable to parse number of outcomes for comp %s: %s", competition.ID, detailResponse.Data.Info.Outcomes))
-				continue
-			}
-
-			for i, participant := range event.Participants {
-				event.Participants[i] = stripCtlAndExtFromUnicode(participant)
-			}
-
-			scale := GetScale(key)
-
-			match := Match{
-				Name:            key,
-				Sport:           sportID,
-				CompetitionID:   event.Competition,
-				CompetitionName: stripCtlAndExtFromUnicode(event.CompetitionName),
-				Participants:    event.Participants,
-				StartDate:       event.StartDate,
-				Outcomes:        numOutcomes,
-				Scale:           scale,
-			}
-
-			bestOdds := svc.GetBestOdds(match, event.Sites)
-
-			svc.UpdateMatchData(bestOdds, &match)
-
-			totalMatched = totalMatched + match.Matched
-			date, err := strconv.Atoi(match.StartDate)
-			if err != nil {
-				svc.Logger.Log("error", fmt.Sprintf("Unable to parse start date into int %s: %s", competition.ID, match.StartDate))
-				continue
-			}
-
-			if date < firstDate {
-				firstDate = date
-			}
-
-			event.Sport = competition.Sport
-			event.Name = key
-			events = append(events, event)
-			matches = append(matches, match)
-			sportMatches[sportID] = append(sportMatches[sportID], match)
-			competitionMatches[competitionID] = append(competitionMatches[competitionID], match)
+		numOutcomes := 3
+		if event.Odds[0].DrawOdds == "0" {
+			numOutcomes = 2
 		}
 
-		compInfo := CompetitionInfo{
-			ID:           competitionID,
-			Name:         competition.Name,
-			Sport:        competition.Sport,
-			StartDate:    firstDate,
-			TotalMatched: totalMatched,
+		participants := []string{event.Home, event.Away}
+
+		date, err := time.Parse(time.RFC3339, event.MatchTime+string("Z"))
+		if err != nil {
+			svc.Logger.Log("error", fmt.Sprintf("Unable to parse match time: %s : %s", event.MatchTime, err.Error()))
+			return
 		}
 
-		competitionOverview[competitionID] = compInfo
-		competitionMatched[competitionID] = totalMatched
+		startDate := strconv.FormatInt(date.Unix(), 10)
 
-		// If there are no matches populate differently
-		if sports[competition.Sport] == nil && detailResponse.Data.Events == nil {
-			sports[competition.Sport] = &Sport{
-				ID:           strings.Replace(strings.ToLower(competition.Sport), " ", "-", -1),
-				Name:         competition.Sport,
-				Count:        0,
+		scale := GetScale(event.ID)
+
+		match := Match{
+			Name:            name,
+			Sport:           sportDetail.SportID,
+			CompetitionID:   sportDetail.CompetitionID,
+			CompetitionName: sportDetail.Competition,
+			Participants:    participants,
+			StartDate:       startDate,
+			Outcomes:        numOutcomes,
+			Scale:           scale,
+		}
+
+		bestOdds := GetOdds(match, event.Odds[0])
+
+		svc.UpdateMatchData(bestOdds, &match)
+
+		matches = append(matches, match)
+		sportMatches[sportDetail.SportID] = append(sportMatches[sportDetail.SportID], match)
+		competitionMatches[sportDetail.CompetitionID] = append(competitionMatches[sportDetail.CompetitionID], match)
+
+		// Add to competition list
+		if _, ok := competitions[sportDetail.CompetitionID]; ok {
+			competitions[sportDetail.CompetitionID].Count++
+		} else {
+			competitions[sportDetail.CompetitionID] = &Competition{
+				ID:    sportDetail.CompetitionID,
+				Name:  sportDetail.Competition,
+				Sport: sportDetail.Sport,
+				Count: 1,
+			}
+		}
+
+		// Add to sport list
+		if _, ok := sports[sportDetail.Sport]; ok {
+			sports[sportDetail.Sport].Count++
+		} else {
+			sports[sportDetail.Sport] = &Sport{
+				ID:           sportDetail.SportID,
+				Name:         sportDetail.Sport,
+				Count:        1,
 				Competitions: []Competition{},
 			}
-		} else if competitions[competition.ID] != nil {
-			// Else ensure map has been set and then append
-			sports[competition.Sport].Competitions = append(sports[competition.Sport].Competitions, *competitions[competition.ID])
 		}
-	}
-	if errors != nil {
-		err := aggregateErrors("Error fetch event data", errors)
-		svc.Logger.Log("error", err.Error())
-		return
+
+		// Add to competition overview list
+		if _, ok := competitionOverview[sportDetail.CompetitionID]; ok {
+			competitionOverview[sportDetail.CompetitionID].TotalMatched += match.Matched
+			if competitionOverview[sportDetail.CompetitionID].StartDate > int(date.Unix()) {
+				competitionOverview[sportDetail.CompetitionID].StartDate = int(date.Unix())
+			}
+
+			competitionMatched[sportDetail.CompetitionID] += match.Matched
+		} else {
+			competitionOverview[sportDetail.CompetitionID] = &CompetitionInfo{
+				ID:           sportDetail.CompetitionID,
+				Name:         sportDetail.Competition,
+				Sport:        sportDetail.Sport,
+				StartDate:    int(date.Unix()),
+				TotalMatched: match.Matched,
+			}
+
+			competitionMatched[sportDetail.CompetitionID] = match.Matched
+		}
+
 	}
 
+	// Append competitions for navigation
+	for _, competition := range competitions {
+		sports[competition.Sport].Competitions = append(sports[competition.Sport].Competitions, *competition)
+	}
+
+	// Not the greatest solution :~)
 	var sportKeys []SportKey
 	for _, sport := range sports {
 		navigation.Sports = append(navigation.Sports, *sport)
@@ -268,7 +265,9 @@ func (svc *Service) FetchMatchData() {
 	sort.Sort(SportByKey(sportKeys))
 	sort.Sort(BySportIndex(navigation.Sports))
 
-	err := svc.SetRedis("all-matches", &matches)
+	svc.Internals.SportKeys = sportKeys
+
+	err = svc.SetRedis("all-matches", &matches)
 	if err != nil {
 		svc.Logger.Log("error", err.Error())
 		return
@@ -303,8 +302,6 @@ func (svc *Service) FetchMatchData() {
 		svc.Logger.Log("error", err.Error())
 		return
 	}
-
-	svc.Internals.SportKeys = sportKeys
 
 	err = svc.SetRedis("sport-keys", &sportKeys)
 	if err != nil {
@@ -442,35 +439,6 @@ func (svc *Service) RecalculateMatchData() {
 		return
 	}
 
-}
-
-func FindBestOdds(match Match) BestOdds {
-	backOdds := match.MatchOdds.Back
-	var bestBackOdds []float64
-	if len(backOdds) > 0 {
-		for _, value := range backOdds {
-			if len(value) > 0 {
-				bestBackOdds = append(bestBackOdds, value[0].Odds)
-			}
-		}
-	}
-
-	layOdds := match.MatchOdds.Lay
-	var bestLayOdds []float64
-	if len(layOdds) > 0 {
-		for _, value := range layOdds {
-			if len(value) > 0 {
-				bestLayOdds = append(bestLayOdds, value[0].Odds)
-			}
-		}
-	}
-
-	bestOdds := BestOdds{
-		Back: bestBackOdds,
-		Lay:  bestLayOdds,
-	}
-
-	return bestOdds
 }
 
 func GetCurrencyRequest(response *map[string]Currency) error {

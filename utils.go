@@ -1,15 +1,11 @@
 package service
 
 import (
-	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"sort"
 
-	"github.com/klauspost/compress/zlib"
 	"golang.org/x/text/transform"
 	"golang.org/x/text/unicode/norm"
 )
@@ -29,18 +25,6 @@ func stripCtlAndExtFromUnicode(str string) string {
 	// or writing data anywhere.
 	str, _, _ = transform.String(t, str)
 	return str
-}
-
-func EncodeResponse(w http.ResponseWriter, response interface{}) {
-	var buf bytes.Buffer
-	zipper := zlib.NewWriter(&buf)
-
-	responseJSON, _ := json.Marshal(response)
-	zipper.Write(responseJSON)
-	zipper.Close()
-
-	responseEncoded := []byte(base64.StdEncoding.EncodeToString(buf.Bytes()))
-	w.Write(responseEncoded)
 }
 
 func TruncateMatches(matches []Match, amount int) []Match {
