@@ -1,15 +1,14 @@
 package service
 
 import (
-	"encoding/json"
+	"encoding/csv"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/parnurzeal/gorequest"
 	"github.com/robfig/cron"
@@ -17,10 +16,18 @@ import (
 
 var JSONOddsAPIKey = os.Getenv("JSON_ODDS_API_KEY")
 
+var APIToken = os.Getenv("SPORTS_API_TOKEN")
+
+// var OddsSources = []string{"1xbet", "pinnaclesports"}
+
+var OddsSources = []string{"bet365", "betfair", "10bet", "williamhill", "betclic", "ysb88", "bwin", "betfred", "betsson", "sbobet", "marathonbet", "intertops", "interwetten", "1xbet", "skybet", "marsbet"}
+
 // Time to wait for a block update until we reselect the best node
 var NodeResetTime = int64(60)
 
 var mutex = &sync.Mutex{}
+
+var eventMutex = &sync.Mutex{}
 
 func (svc *Service) InitialiseScheduler() {
 	c := cron.New()
@@ -93,24 +100,43 @@ func (svc *Service) FetchPriceData() {
 
 }
 
-func (svc *Service) FetchEventData() {
-	var response []EventData
-	_, _, errs := gorequest.New().
-		Get(fmt.Sprintf("https://jsonodds.com/api/odds/?oddType=game")).
-		Set("x-api-key", JSONOddsAPIKey).
-		EndStruct(&response)
-	if errs != nil {
-		err := aggregateErrors("Unable to fetch match data", errs)
-		svc.Logger.Log("error", err.Error())
-		return
+var a_wg = 0
+var b_wg = 0
+
+func Add(wg *sync.WaitGroup, group string) {
+	var value int
+	if group == "a" {
+		a_wg += 1
+		value = a_wg
+	} else {
+		b_wg += 1
+		value = b_wg
 	}
 
-	responseJSON, _ := json.Marshal(response)
-	err := ioutil.WriteFile("event-list.json", responseJSON, 0644)
-	if err != nil {
-		svc.Logger.Log("error", fmt.Sprintf("Unable to write match list to file: %s", err.Error()))
-		return
+	text := fmt.Sprintf("%s - %d", group, value)
+	fmt.Println(text)
+
+	wg.Add(1)
+}
+
+func Done(wg *sync.WaitGroup, group string) {
+	var value int
+	if group == "a" {
+		a_wg -= 1
+		value = a_wg
+	} else {
+		b_wg -= 1
+		value = b_wg
 	}
+
+	text := fmt.Sprintf("%s - %d", group, value)
+	fmt.Println(text)
+
+	wg.Done()
+}
+
+func (svc *Service) FetchEventData() {
+	var wg_1 sync.WaitGroup
 
 	var matches []Match
 	var navigation Navigation
@@ -124,124 +150,185 @@ func (svc *Service) FetchEventData() {
 	competitionOverview := make(map[string]*CompetitionInfo)
 	competitionMatched := make(map[string]float64)
 
-	for _, event := range response {
+	// Open and read whitelist file
+	file, err := os.Open("api_whitelist.csv")
+	if err != nil {
+		svc.Logger.Log("error", err.Error())
+		return
+	}
 
-		// Skip if we haven't whitelisted the sport
-		if _, ok := SportDetailMap[event.Sport]; !ok {
-			continue
+	csvR := csv.NewReader(file)
+
+	// Iterate over each row
+	for {
+		var wg_2 sync.WaitGroup
+
+		leagueDetail, err := csvR.Read()
+		if err == io.EOF {
+			break
 		}
-
-		sportDetail := SportDetailMap[event.Sport]
-
-		if sportDetail.SportID == "soccer" {
-			league := stripCtlAndExtFromUnicode(event.League)
-			if league == "Ligue 1" || league == "Ligue 2" {
-				league = "French " + league
-			} else if league == "La Liga" {
-				league = "Spanish La Liga"
-			} else if league == "World Cup" {
-				league = "2018 FIFA World Cup"
-			}
-
-			sportDetail.Competition = league
-			sportDetail.CompetitionID = strings.Replace(strings.ToLower(league), " ", "-", -1)
-
-			if !LeagueWhitelist[sportDetail.CompetitionID] {
-				continue
-			}
-
-		} else if sportDetail.Competition == "" {
-			// Mark for later
-			sportDetail.Competition = sportDetail.Sport
-			sportDetail.CompetitionID = sportDetail.SportID
-		}
-
-		event.Home = stripCtlAndExtFromUnicode(event.Home)
-		event.Away = stripCtlAndExtFromUnicode(event.Away)
-
-		name := event.Home + string("_") + event.Away
-
-		numOutcomes := 3
-		if event.Odds[0].DrawOdds == "0" {
-			numOutcomes = 2
-		}
-
-		participants := []string{event.Home, event.Away}
-
-		date, err := time.Parse(time.RFC3339, event.MatchTime+string("Z"))
 		if err != nil {
-			svc.Logger.Log("error", fmt.Sprintf("Unable to parse match time: %s : %s", event.MatchTime, err.Error()))
+			svc.Logger.Log("error", err.Error())
 			return
 		}
 
-		startDate := strconv.FormatInt(date.Unix(), 10)
+		wg_1.Add(1)
 
-		scale := GetScale(event.ID)
+		sportID := leagueDetail[0]
+		leagueID := leagueDetail[1]
+		leagueName := leagueDetail[2]
+		leagueInternalID := leagueDetail[3]
 
-		match := Match{
-			Name:            name,
-			Sport:           sportDetail.SportID,
-			CompetitionID:   sportDetail.CompetitionID,
-			CompetitionName: sportDetail.Competition,
-			Participants:    participants,
-			StartDate:       startDate,
-			Outcomes:        numOutcomes,
-			Scale:           scale,
-		}
+		go func() {
+			defer wg_1.Done()
 
-		bestOdds := GetOdds(match, event.Odds[0])
-
-		svc.UpdateMatchData(bestOdds, &match)
-
-		matches = append(matches, match)
-		sportMatches[sportDetail.SportID] = append(sportMatches[sportDetail.SportID], match)
-		competitionMatches[sportDetail.CompetitionID] = append(competitionMatches[sportDetail.CompetitionID], match)
-
-		// Add to competition list
-		if _, ok := competitions[sportDetail.CompetitionID]; ok {
-			competitions[sportDetail.CompetitionID].Count++
-		} else {
-			competitions[sportDetail.CompetitionID] = &Competition{
-				ID:    sportDetail.CompetitionID,
-				Name:  sportDetail.Competition,
-				Sport: sportDetail.Sport,
-				Count: 1,
-			}
-		}
-
-		// Add to sport list
-		if _, ok := sports[sportDetail.Sport]; ok {
-			sports[sportDetail.Sport].Count++
-		} else {
-			sports[sportDetail.Sport] = &Sport{
-				ID:           sportDetail.SportID,
-				Name:         sportDetail.Sport,
-				Count:        1,
-				Competitions: []Competition{},
-			}
-		}
-
-		// Add to competition overview list
-		if _, ok := competitionOverview[sportDetail.CompetitionID]; ok {
-			competitionOverview[sportDetail.CompetitionID].TotalMatched += match.Matched
-			if competitionOverview[sportDetail.CompetitionID].StartDate > int(date.Unix()) {
-				competitionOverview[sportDetail.CompetitionID].StartDate = int(date.Unix())
+			var response UpcomingEventsResponse
+			_, _, errs := gorequest.New().
+				Get(fmt.Sprintf("https://api.betsapi.com/v1/events/upcoming?sport_id=%s&league_id=%s&token=%s", sportID, leagueID, APIToken)).
+				EndStruct(&response)
+			if errs != nil {
+				err := aggregateErrors("Unable to fetch upcoming event data", errs)
+				svc.Logger.Log("error", err.Error())
+				return
+			} else if response.Success == 0 {
+				svc.Logger.Log("error", response.Error)
+				return
 			}
 
-			competitionMatched[sportDetail.CompetitionID] += match.Matched
-		} else {
-			competitionOverview[sportDetail.CompetitionID] = &CompetitionInfo{
-				ID:           sportDetail.CompetitionID,
-				Name:         sportDetail.Competition,
-				Sport:        sportDetail.Sport,
-				StartDate:    int(date.Unix()),
-				TotalMatched: match.Matched,
+			for _, e := range response.Results {
+				wg_2.Add(1)
+
+				go func(event Event) {
+					defer wg_2.Done()
+
+					var hasDraw = false
+					var odds []ThreeWayOdd
+
+					for _, source := range OddsSources {
+						var oddsResponse EventOddsResponse
+
+						_, _, errs := gorequest.New().
+							Get(fmt.Sprintf("https://api.betsapi.com/v1/event/odds?event_id=%s&odds_market=1&source=%s&token=%s", event.ID, source, APIToken)).
+							EndStruct(&oddsResponse)
+						if errs != nil {
+							// This happens commonly due to mismatched data structures on their end if odds arent found - taking away logging for now
+
+							// err := aggregateErrors("Unable to fetch event odds", errs)
+							// svc.Logger.Log("error", err.Error())
+							continue
+						} else if oddsResponse.Success == 0 {
+							svc.Logger.Log("error", oddsResponse.Error)
+							continue
+						}
+
+						sourceOdds := oddsResponse.Results.GetSportOdds(sportID)
+						if len(sourceOdds) < 1 {
+							continue
+						}
+
+						latestOdds := sourceOdds[0] // [0] is the latest odds
+						odds = append(odds, latestOdds)
+
+						if latestOdds.DrawOdds != "" {
+							hasDraw = true
+						}
+					}
+
+					if len(odds) < 1 {
+						return
+					}
+
+					// Set up match details
+					name := event.Home.Name + string("_") + event.Away.Name
+					sport := SportList[sportID].Name
+					sportID := SportList[sportID].ID
+					competition := leagueName
+					competitionID := leagueInternalID
+					participants := []string{event.Home.Name, event.Away.Name}
+					scale := GetScale(name)
+					numOutcomes := 3
+					if !hasDraw {
+						numOutcomes = 2
+					}
+
+					match := Match{
+						Name:            name,
+						Sport:           sportID,
+						CompetitionName: competition,
+						CompetitionID:   competitionID,
+						Participants:    participants,
+						StartDate:       event.MatchTime,
+						Outcomes:        numOutcomes,
+						Scale:           scale,
+					}
+
+					bestOdds := svc.GetBestOdds(match, odds)
+					_ = svc.UpdateMatchData(bestOdds, &match)
+
+					// Add match to appropriate maps/lists
+					eventMutex.Lock()
+
+					matches = append(matches, match)
+					sportMatches[sportID] = append(sportMatches[sportID], match)
+					competitionMatches[competitionID] = append(competitionMatches[competitionID], match)
+
+					// Competition list
+					if _, ok := competitions[competitionID]; ok {
+						competitions[competitionID].Count++
+					} else {
+						competitions[competitionID] = &Competition{
+							ID:    competitionID,
+							Name:  competition,
+							Sport: sport,
+							Count: 1,
+						}
+					}
+
+					// Sport list
+					if _, ok := sports[sport]; ok {
+						sports[sport].Count++
+					} else {
+						sports[sport] = &Sport{
+							ID:           sportID,
+							Name:         sport,
+							Count:        1,
+							Competitions: []Competition{},
+						}
+					}
+
+					// Competition overview list
+					date, _ := strconv.Atoi(event.MatchTime)
+					if _, ok := competitionOverview[competitionID]; ok {
+						competitionOverview[competitionID].TotalMatched += match.Matched
+
+						if competitionOverview[competitionID].StartDate > date {
+							competitionOverview[competitionID].StartDate = date
+						}
+
+						competitionMatched[competitionID] += match.Matched
+					} else {
+						competitionOverview[competitionID] = &CompetitionInfo{
+							ID:           competitionID,
+							Name:         competition,
+							Sport:        sport,
+							StartDate:    date,
+							TotalMatched: match.Matched,
+						}
+
+						competitionMatched[competitionID] = match.Matched
+					}
+
+					eventMutex.Unlock()
+
+				}(e)
+
 			}
 
-			competitionMatched[sportDetail.CompetitionID] = match.Matched
-		}
-
+			wg_2.Wait()
+		}()
 	}
+
+	wg_1.Wait()
 
 	// Append competitions for navigation
 	for _, competition := range competitions {

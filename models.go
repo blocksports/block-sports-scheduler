@@ -5,6 +5,50 @@ import (
 	"strconv"
 )
 
+type UpcomingEventsResponse struct {
+	Success int     `json:"success"`
+	Pager   Pager   `json:"pager"`
+	Results []Event `json:"results"`
+	Error   string  `json:"error"`
+}
+
+type EventOddsResponse struct {
+	Success int          `json:"success"`
+	Results ThreeWayOdds `json:"results"`
+	Error   string       `json:"error"`
+}
+
+type Event struct {
+	ID        string `json:"id"`
+	SportID   string `json:"sport_id"`
+	MatchTime string `json:"time"`
+	League    League `json:"league"`
+	Home      Team   `json:"home"`
+	Away      Team   `json:"away"`
+}
+
+type League struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type Team struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type ThreeWayOdd struct {
+	HomeOdds string `json:"home_od"`
+	AwayOdds string `json:"away_od"`
+	DrawOdds string `json:"draw_od"`
+}
+
+type Pager struct {
+	Page    int `json:"page"`
+	PerPage int `json:"per_page"`
+	Total   int `json:"total"`
+}
+
 type EventData struct {
 	ID        string      `json:"ID"`
 	Home      string      `json:"HomeTeam"`
@@ -343,4 +387,93 @@ var LeagueWhitelist = map[string]bool{
 	"english-fa-cup":         true,
 	"scottish-premiership":   true,
 	"premier-division":       true,
+}
+
+var SportList = map[string]SportInfo{
+	"1": SportInfo{
+		ID:   "soccer",
+		Name: "Soccer",
+	},
+	"3": SportInfo{
+		ID:   "cricket",
+		Name: "Cricket",
+	},
+	"8": SportInfo{
+		ID:   "rugby-union",
+		Name: "Rugby Union",
+	},
+	"9": SportInfo{
+		ID:   "boxing-ufc",
+		Name: "Boxing/UFC",
+	},
+	"12": SportInfo{
+		ID:   "american-football",
+		Name: "American Football",
+	},
+	"13": SportInfo{
+		ID:   "tennis",
+		Name: "Tennis",
+	},
+	"16": SportInfo{
+		ID:   "baseball",
+		Name: "Baseball",
+	},
+	"17": SportInfo{
+		ID:   "ice-hockey",
+		Name: "Ice Hockey",
+	},
+	"18": SportInfo{
+		ID:   "basketball",
+		Name: "Basketball",
+	},
+	"19": SportInfo{
+		ID:   "rugby-league",
+		Name: "Rugby League",
+	},
+}
+
+// If we want to unmarshal cleanly we tag each individual sport
+type ThreeWayOdds struct {
+	SoccerOdds     []ThreeWayOdd `json:"1_1"`
+	CricketOdds    []ThreeWayOdd `json:"3_1"`
+	UnionOdds      []ThreeWayOdd `json:"8_1"`
+	BoxingOdds     []ThreeWayOdd `json:"9_1"`
+	FootballOdds   []ThreeWayOdd `json:"12_1"`
+	TennisOdds     []ThreeWayOdd `json:"13_1"`
+	BaseballOdds   []ThreeWayOdd `json:"16_1"`
+	HockeyOdds     []ThreeWayOdd `json:"17_1"`
+	BasketballOdds []ThreeWayOdd `json:"18_1"`
+	LeagueOdds     []ThreeWayOdd `json:"19_1"`
+}
+
+func (t ThreeWayOdds) GetSportOdds(sport string) (odds []ThreeWayOdd) {
+	switch s := sport; s {
+	case "1":
+		return t.SoccerOdds
+	case "3":
+		return t.CricketOdds
+	case "8":
+		return t.UnionOdds
+	case "9":
+		return t.BoxingOdds
+	case "12":
+		return t.FootballOdds
+	case "13":
+		return t.TennisOdds
+	case "16":
+		return t.BaseballOdds
+	case "17":
+		return t.HockeyOdds
+	case "18":
+		return t.BasketballOdds
+	case "19":
+		return t.LeagueOdds
+	default:
+		return
+	}
+}
+
+type SportInfo struct {
+	ID   string
+	Name string
 }

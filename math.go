@@ -71,6 +71,60 @@ func GetOdds(match Match, odds EventOdds) BestOdds {
 	}
 }
 
+// GetBestOdds gets the best odds as averaged from the aggregated sites
+func (svc *Service) GetBestOdds(match Match, allOdds []ThreeWayOdd) BestOdds {
+	numOutcomes := match.Outcomes
+	scale := match.Scale
+
+	fnLayDifference := makeLogistical([4]float64{186.2695, 4.2213, 29.5378, -0.07})
+	numSites := []float64{0, 0, 0}
+	backOdds := make([]float64, numOutcomes)
+	layOdds := make([]float64, numOutcomes)
+
+	for _, odds := range allOdds {
+		for i := 0; i < numOutcomes; i++ {
+			var oddsString string
+			switch i {
+			case 0:
+				oddsString = odds.HomeOdds
+			case 1:
+				oddsString = odds.AwayOdds
+			case 2:
+				oddsString = odds.DrawOdds
+			}
+
+			backFloat, err := strconv.ParseFloat(oddsString, 32)
+			if err == nil {
+				backOdds[i] += backFloat
+				numSites[i]++
+			}
+		}
+	}
+
+	for i := 0; i < numOutcomes; i++ {
+		backOdds[i] /= numSites[i]
+		if math.IsNaN(backOdds[i]) {
+			backOdds[i] = 0
+			layOdds[i] = 0
+			continue
+		}
+
+		layDifference := fnLayDifference(scale) / 2
+
+		layOdds[i] = backOdds[i] + layDifference + addNormalNoise(layDifference)
+		if layOdds[i]-backOdds[i] < 0.01 {
+			layOdds[i] = backOdds[i] + 0.01
+		}
+
+	}
+
+	return BestOdds{
+		Back: backOdds,
+		Lay:  layOdds,
+	}
+}
+
+// FindBestOdds looks through an event's generated odds so their best odds can be re-used
 func FindBestOdds(match Match) BestOdds {
 	backOdds := match.MatchOdds.Back
 	var bestBackOdds []float64
