@@ -135,6 +135,3 @@ jobs:
               aws ecs update-service --cluster "$CLUSTER" --service "$SERVICE" --task-definition "$TASK":"$revision" --network-configuration "$awsvpc_config"
                         
             fi
-
-
-          }
