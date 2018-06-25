@@ -121,8 +121,20 @@ jobs:
 
               # Grab revision # using regular bash and grep
               revision=$(echo "$json" | grep -o '"revision": [0-9]*' | grep -Eo '[0-9]+')
+              
+              awsvpc_config = '[
+                {
+                "awsvpcConfiguration": {
+                  "subnets": ["subnet-47c1240c", "subnet-8fa509d5"],
+                  "securityGroups": ["sg-0e2b3c7f"],
+                  "assignPublicIp": "DISABLED"
+                }
+              ]'
 
               # Deploy revision
-              aws ecs update-service --cluster "$CLUSTER" --service "$SERVICE" --task-definition "$TASK":"$revision"
+              aws ecs update-service --cluster "$CLUSTER" --service "$SERVICE" --task-definition "$TASK":"$revision" --network-configuration "$awsvpc_config"
                         
             fi
+
+
+          }
