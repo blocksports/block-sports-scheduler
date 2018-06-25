@@ -65,8 +65,8 @@ jobs:
                   "name": "demo-scheduler",
                   "image": "%s.dkr.ecr.%s.amazonaws.com/blocksports-demo/scheduler:%s",
                   "essential": true,
-                  "memoryReservation": 500,
-                  "cpu": 500,
+                  "memoryReservation": 1024,
+                  "cpu": 1024,
                   "environment": [
                     {
                       "name": "REDIS_ADDR",
@@ -116,12 +116,8 @@ jobs:
               
               execution_role="arn:aws:iam::$AWS_ACCOUNT_ID::role/ecsTaskExecutionRole"
 
-              compatibilities='[
-                "FARGATE"
-              ]'
-
               # Register task definition
-              json=$(aws ecs register-task-definition --requires-compatibilities $compatibilities --container-definitions "$container_def" --family "$TASK" --network-mode "awsvpc" --execution-role-arn "$execution_role" --memory "1024" --cpu "1024")
+              json=$(aws ecs register-task-definition --requires-compatibilities [ "FARGATE" ] --container-definitions "$container_def" --family "$TASK" --network-mode "awsvpc" --execution-role-arn "$execution_role" --memory "1024" --cpu "1024")
 
               # Grab revision # using regular bash and grep
               revision=$(echo "$json" | grep -o '"revision": [0-9]*' | grep -Eo '[0-9]+')
