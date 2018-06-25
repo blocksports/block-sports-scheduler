@@ -122,7 +122,7 @@ jobs:
               # Grab revision # using regular bash and grep
               revision=$(echo "$json" | grep -o '"revision": [0-9]*' | grep -Eo '[0-9]+')
               
-              awsvpc_config = '[
+              awsvpc_config='[
                 {
                 "awsvpcConfiguration": {
                   "subnets": ["subnet-47c1240c", "subnet-8fa509d5"],
