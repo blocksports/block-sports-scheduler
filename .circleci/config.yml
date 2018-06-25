@@ -124,9 +124,10 @@ jobs:
               
               awsvpc_config='{
                 "awsvpcConfiguration": {
-                  "subnets": ["subnet-47c1240c", "subnet-8fa509d5"],
+                  "subnets": ["subnet-47c1240c","subnet-8fa509d5"],
                   "securityGroups": ["sg-0e2b3c7f"],
                   "assignPublicIp": "DISABLED"
+                }
               }'
 
               # Deploy revision
