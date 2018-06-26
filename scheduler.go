@@ -14,11 +14,7 @@ import (
 	"github.com/robfig/cron"
 )
 
-var JSONOddsAPIKey = os.Getenv("JSON_ODDS_API_KEY")
-
 var APIToken = os.Getenv("SPORTS_API_TOKEN")
-
-// var OddsSources = []string{"1xbet", "pinnaclesports"}
 
 var OddsSources = []string{"bet365", "betfair", "10bet", "williamhill", "betclic", "ysb88", "bwin", "betfred", "betsson", "sbobet", "marathonbet", "intertops", "interwetten", "1xbet", "skybet", "marsbet"}
 

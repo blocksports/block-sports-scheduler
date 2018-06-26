@@ -104,7 +104,7 @@ jobs:
                   "logConfiguration": {
                     "logDriver": "awslogs",
                     "options": {
-                      "awslogs-group": "bsx-demo",
+                      "awslogs-group": "demo-logs",
                       "awslogs-region": "us-west-2",
                       "awslogs-stream-prefix": "demo-scheduler"
                     }
