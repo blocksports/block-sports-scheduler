@@ -97,7 +97,7 @@ jobs:
                       "value": "mt1"
                     },
                     {
-                      "name": "JSON_ODDS_API_KEY",
+                      "name": "SPORTS_API_TOKEN",
                       "value": "%s"
                     }
                   ],
