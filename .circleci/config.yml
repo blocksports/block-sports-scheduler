@@ -106,7 +106,7 @@ jobs:
                     "options": {
                       "awslogs-group": "bsx-demo",
                       "awslogs-region": "us-west-2",
-                      "awslogs-stream-prefix": "demo"
+                      "awslogs-stream-prefix": "demo-scheduler"
                     }
                   }
                 }
