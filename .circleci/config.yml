@@ -114,7 +114,7 @@ jobs:
 
               container_def=$(printf "$task_template" $AWS_ACCOUNT_ID $AWS_REGION $TAG $PUSHER_ID_PROD $PUSHER_KEY_PROD $PUSHER_SECRET_PROD $JSON_ODDS_API_KEY)
               
-              execution_role="arn:aws:iam::$AWS_ACCOUNT_ID::role/ecsTaskExecutionRole"
+              execution_role="ecsTaskExecutionRole"
 
               compatibilities='["EC2", "FARGATE"]'
 
