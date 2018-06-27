@@ -104,7 +104,7 @@ jobs:
                   "logConfiguration": {
                     "logDriver": "awslogs",
                     "options": {
-                      "awslogs-group": "demo-logs",
+                      "awslogs-group": "demo",
                       "awslogs-region": "us-west-2",
                       "awslogs-stream-prefix": "demo-scheduler"
                     }
@@ -121,18 +121,18 @@ jobs:
               # Register task definition
               json=$(aws ecs register-task-definition --container-definitions "$container_def" --family "$TASK" --network-mode "awsvpc" --execution-role-arn "$execution_role" --memory "1024" --cpu "512" --requires-compatibilities "$compatibilities")
 
-              # Grab revision # using regular bash and grep
-              revision=$(echo "$json" | grep -o '"revision": [0-9]*' | grep -Eo '[0-9]+')
+              # # Grab revision # using regular bash and grep
+              # revision=$(echo "$json" | grep -o '"revision": [0-9]*' | grep -Eo '[0-9]+')
               
-              awsvpc_config='{
-                "awsvpcConfiguration": {
-                  "subnets": ["subnet-47c1240c","subnet-8fa509d5"],
-                  "securityGroups": ["sg-0e2b3c7f"],
-                  "assignPublicIp": "DISABLED"
-                }
-              }'
+              # awsvpc_config='{
+              #   "awsvpcConfiguration": {
+              #     "subnets": ["subnet-47c1240c","subnet-8fa509d5"],
+              #     "securityGroups": ["sg-0e2b3c7f"],
+              #     "assignPublicIp": "DISABLED"
+              #   }
+              # }'
 
-              # Deploy revision
-              aws ecs update-service --cluster "$CLUSTER" --service "$SERVICE" --task-definition "$TASK":"$revision" --network-configuration "$awsvpc_config"
+              # # Deploy revision
+              # aws ecs update-service --cluster "$CLUSTER" --service "$SERVICE" --task-definition "$TASK":"$revision" --network-configuration "$awsvpc_config"
                         
             fi
