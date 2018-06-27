@@ -112,7 +112,7 @@ jobs:
                 }
               ]'
 
-              container_def=$(printf "$task_template" $AWS_ACCOUNT_ID $AWS_REGION $TAG $PUSHER_ID_PROD $PUSHER_KEY_PROD $PUSHER_SECRET_PROD $JSON_ODDS_API_KEY)
+              container_def=$(printf "$task_template" $AWS_ACCOUNT_ID $AWS_REGION $TAG $PUSHER_ID_PROD $PUSHER_KEY_PROD $PUSHER_SECRET_PROD $SPORTS_API_TOKEN)
               
               execution_role="ecsTaskExecutionRole"
 
