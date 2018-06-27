@@ -26,6 +26,8 @@ var mutex = &sync.Mutex{}
 var eventMutex = &sync.Mutex{}
 
 func (svc *Service) InitialiseScheduler() {
+	svc.Logger.Log("msg", "Initialising Scheduler")
+
 	c := cron.New()
 
 	c.AddFunc("@every 1s", svc.FetchBlockchainData)
@@ -154,6 +156,8 @@ func (svc *Service) FetchEventData() {
 	}
 
 	csvR := csv.NewReader(file)
+
+	svc.Logger.Log("msg", "Fetching match data")
 
 	// Iterate over each row
 	for {
