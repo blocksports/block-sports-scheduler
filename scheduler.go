@@ -2,9 +2,11 @@ package service
 
 import (
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -204,31 +206,49 @@ func (svc *Service) FetchEventData() {
 					var hasDraw = false
 					var odds []ThreeWayOdd
 
-					for _, source := range OddsSources {
-						var oddsResponse EventOddsResponse
+					var oddsResponse EventOddsResponseA
+					_, _, errs := gorequest.New().
+						Get(fmt.Sprintf("https://api.betsapi.com/v1/event/odds/summary?event_id=%s&token=%s", event.ID, APIToken)).
+						EndStruct(&oddsResponse)
+					if errs != nil {
+						// expected when there are no results
 
-						_, _, errs := gorequest.New().
-							Get(fmt.Sprintf("https://api.betsapi.com/v1/event/odds?event_id=%s&odds_market=1&source=%s&token=%s", event.ID, source, APIToken)).
-							EndStruct(&oddsResponse)
-						if errs != nil {
-							// This happens commonly due to mismatched data structures on their end if odds arent found - taking away logging for now
+						// err := aggregateErrors(fmt.Sprintf("%s - Unable to fetch event odds", event.ID), errs)
+						// svc.Logger.Log("error", err.Error())
+						return
+					}
 
-							// err := aggregateErrors("Unable to fetch event odds", errs)
-							// svc.Logger.Log("error", err.Error())
-							continue
-						} else if oddsResponse.Success == 0 {
-							svc.Logger.Log("error", oddsResponse.Error)
+					oddsReflect := reflect.ValueOf(oddsResponse.Results)
+
+					// Iterate over all the returned providers
+					for i := 0; i < oddsReflect.NumField(); i++ {
+						rawProvider, ok := oddsReflect.Field(i).Interface().(interface{})
+						if !ok {
+							// expected when nil interface is given
 							continue
 						}
 
-						sourceOdds := oddsResponse.Results.GetSportOdds(sportID)
-						if len(sourceOdds) < 1 {
+						jsonProvider, err := json.Marshal(rawProvider)
+						if err != nil {
+							svc.Logger.Log("error", err.Error())
 							continue
 						}
 
-						latestOdds := sourceOdds[0] // [0] is the latest odds
+						var provider Provider
+
+						err = json.Unmarshal(jsonProvider, &provider)
+						if err != nil {
+							// expected when array is given
+							continue
+						}
+
+						latestOdds := provider.LatestOdds.GetSportOdds(sportID)
+
+						if latestOdds.IsEmpty() {
+							continue
+						}
+
 						odds = append(odds, latestOdds)
-
 						if latestOdds.DrawOdds != "" {
 							hasDraw = true
 						}

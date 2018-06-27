@@ -1,6 +1,7 @@
 package service
 
 import (
+	"reflect"
 	"sort"
 	"strconv"
 )
@@ -16,6 +17,12 @@ type EventOddsResponse struct {
 	Success int          `json:"success"`
 	Results ThreeWayOdds `json:"results"`
 	Error   string       `json:"error"`
+}
+
+type EventOddsResponseA struct {
+	Success int       `json:"success"`
+	Results Providers `json:"results"`
+	Error   string    `json:"error"`
 }
 
 type Event struct {
@@ -446,7 +453,85 @@ type ThreeWayOdds struct {
 	LeagueOdds     []ThreeWayOdd `json:"19_1"`
 }
 
+type Providers struct {
+	A1XBet       interface{} `json:"1XBet"`
+	A10Bet       interface{} `json:"10Bet"`
+	A888Sport    interface{} `json:"888Sport"`
+	Bet365       interface{} `json:"Bet365"`
+	BetAtHome    interface{} `json:"BetAtHome"`
+	BetClic      interface{} `json:"BetClic"`
+	Betdaq       interface{} `json:"Betdaq"`
+	BetFair      interface{} `json:"BetFair"`
+	BetFred      interface{} `json:"BetFred"`
+	Betsson      interface{} `json:"Betsson"`
+	Betway       interface{} `json:"Betway"`
+	BWin         interface{} `json:"BWin"`
+	Intertops    interface{} `json:"Intertops"`
+	Interwetten  interface{} `json:"Interwetten"`
+	Ladbrokes    interface{} `json:"Ladbrokes"`
+	Marathonbet  interface{} `json:"Marathonbet"`
+	MarsBet      interface{} `json:"MarsBet"`
+	PlanetWin365 interface{} `json:"PlanetWin365"`
+	SBOBET       interface{} `json:"SBOBET"`
+	SkyBet       interface{} `json:"SkyBet"`
+	TitanBet     interface{} `json:"TitanBet"`
+	UniBet       interface{} `json:"UniBet"`
+	VBet         interface{} `json:"VBet"`
+	WilliamHill  interface{} `json:"WilliamHill"`
+	Winner       interface{} `json:"Winner"`
+	YSB88        interface{} `json:"YSB88"`
+}
+
+type Provider struct {
+	LatestOdds ThreeWayOddsA `json:"end"`
+}
+
+func (o ThreeWayOdd) IsEmpty() bool {
+	return reflect.DeepEqual(o, ThreeWayOdd{})
+}
+
+// If we want to unmarshal cleanly we tag each individual sport
+type ThreeWayOddsA struct {
+	SoccerOdds     ThreeWayOdd `json:"1_1"`
+	CricketOdds    ThreeWayOdd `json:"3_1"`
+	UnionOdds      ThreeWayOdd `json:"8_1"`
+	BoxingOdds     ThreeWayOdd `json:"9_1"`
+	FootballOdds   ThreeWayOdd `json:"12_1"`
+	TennisOdds     ThreeWayOdd `json:"13_1"`
+	BaseballOdds   ThreeWayOdd `json:"16_1"`
+	HockeyOdds     ThreeWayOdd `json:"17_1"`
+	BasketballOdds ThreeWayOdd `json:"18_1"`
+	LeagueOdds     ThreeWayOdd `json:"19_1"`
+}
+
 func (t ThreeWayOdds) GetSportOdds(sport string) (odds []ThreeWayOdd) {
+	switch s := sport; s {
+	case "1":
+		return t.SoccerOdds
+	case "3":
+		return t.CricketOdds
+	case "8":
+		return t.UnionOdds
+	case "9":
+		return t.BoxingOdds
+	case "12":
+		return t.FootballOdds
+	case "13":
+		return t.TennisOdds
+	case "16":
+		return t.BaseballOdds
+	case "17":
+		return t.HockeyOdds
+	case "18":
+		return t.BasketballOdds
+	case "19":
+		return t.LeagueOdds
+	default:
+		return
+	}
+}
+
+func (t ThreeWayOddsA) GetSportOdds(sport string) (odds ThreeWayOdd) {
 	switch s := sport; s {
 	case "1":
 		return t.SoccerOdds
