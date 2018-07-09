@@ -145,7 +145,7 @@ type Match struct {
 	Outcomes        int        `json:"outcomes"`
 	Matched         float64    `json:"matched"`
 	MatchOdds       *MatchOdds `json:"match_odds"`
-	Scale           float64    `json:"scale"` // Scale of the match : large scale == more matched etc
+	Scale           float64    `json:"scale"`
 }
 
 type ByDate []Match

@@ -103,38 +103,6 @@ func (svc *Service) FetchPriceData() {
 var a_wg = 0
 var b_wg = 0
 
-func Add(wg *sync.WaitGroup, group string) {
-	var value int
-	if group == "a" {
-		a_wg += 1
-		value = a_wg
-	} else {
-		b_wg += 1
-		value = b_wg
-	}
-
-	text := fmt.Sprintf("%s - %d", group, value)
-	fmt.Println(text)
-
-	wg.Add(1)
-}
-
-func Done(wg *sync.WaitGroup, group string) {
-	var value int
-	if group == "a" {
-		a_wg -= 1
-		value = a_wg
-	} else {
-		b_wg -= 1
-		value = b_wg
-	}
-
-	text := fmt.Sprintf("%s - %d", group, value)
-	fmt.Println(text)
-
-	wg.Done()
-}
-
 func (svc *Service) FetchEventData() {
 	var wg sync.WaitGroup
 
@@ -178,6 +146,15 @@ func (svc *Service) FetchEventData() {
 		leagueID := leagueDetail[1]
 		leagueName := leagueDetail[2]
 		leagueInternalID := leagueDetail[3]
+		scaleString := leagueDetail[4]
+
+		leagueScale, err := strconv.ParseFloat(scaleString, 64)
+		if err != nil {
+			svc.Logger.Log("error", err.Error())
+			return
+		}
+
+		svc.Internals.LeagueScales[leagueInternalID] = leagueScale
 
 		go func() {
 			defer wg.Done()
@@ -215,6 +192,7 @@ func (svc *Service) FetchEventData() {
 				oddsReflect := reflect.ValueOf(oddsResponse.Results)
 
 				// Iterate over all the returned providers
+				// Have to re-marshal to find poorly returned objects and to cast to Provider struct
 				for i := 0; i < oddsReflect.NumField(); i++ {
 					rawProvider, ok := oddsReflect.Field(i).Interface().(interface{})
 					if !ok {
@@ -259,7 +237,7 @@ func (svc *Service) FetchEventData() {
 				competition := leagueName
 				competitionID := leagueInternalID
 				participants := []string{event.Home.Name, event.Away.Name}
-				scale := GetScale(name)
+				scale := leagueScale + addNoise(0.05)
 				numOutcomes := 3
 				if !hasDraw {
 					numOutcomes = 2

@@ -35,42 +35,6 @@ func GenerateSeededID(matchName, matchDate string) string {
 	return strings.Replace(encoded, "/", "a", -1)
 }
 
-func GetOdds(match Match, odds EventOdds) BestOdds {
-	numOutcomes := match.Outcomes
-	scale := match.Scale
-
-	fnLayDifference := makeLogistical([4]float64{186.2695, 4.2213, 29.5378, -0.07})
-	layDifference := fnLayDifference(scale) / 2
-
-	backOdds := make([]float64, numOutcomes)
-	layOdds := make([]float64, numOutcomes)
-
-	homeOdds := ConvertMoneylineOdds(odds.HomeOdds)
-	awayOdds := ConvertMoneylineOdds(odds.AwayOdds)
-	drawOdds := ConvertMoneylineOdds(odds.DrawOdds)
-
-	for i := 0; i < numOutcomes; i++ {
-		switch i {
-		case 0:
-			backOdds[i] = homeOdds
-		case 1:
-			backOdds[i] = awayOdds
-		case 2:
-			backOdds[i] = drawOdds
-		}
-
-		layOdds[i] = backOdds[i] + layDifference + addNormalNoise(layDifference)
-		if layOdds[i]-backOdds[i] < 0.01 {
-			layOdds[i] = backOdds[i] + 0.01
-		}
-	}
-
-	return BestOdds{
-		Back: backOdds,
-		Lay:  layOdds,
-	}
-}
-
 // GetBestOdds gets the best odds as averaged from the aggregated sites
 func (svc *Service) GetBestOdds(match Match, allOdds []ThreeWayOdd) BestOdds {
 	numOutcomes := match.Outcomes
@@ -154,17 +118,6 @@ func FindBestOdds(match Match) BestOdds {
 	return bestOdds
 }
 
-func ConvertMoneylineOdds(odds string) float64 {
-	floatOdds, _ := strconv.ParseFloat(odds, 64)
-	if floatOdds > 0 {
-		floatOdds = floatOdds/100 + 1
-	} else if floatOdds < 0 {
-		floatOdds = 100/-floatOdds + 1
-	}
-
-	return round.ToEven(floatOdds, 2)
-}
-
 // UpdateMatchData generates odds and matched amounts based on the current best odds, randomness and ~maths~
 func (svc *Service) UpdateMatchData(bestOdds BestOdds, match *Match) error {
 	exchangeRate := svc.Internals.PriceDetails.ExchangeRate
@@ -183,29 +136,22 @@ func (svc *Service) UpdateMatchData(bestOdds BestOdds, match *Match) error {
 	}
 	timeScale := fnTimeScale(float64(timeTo))
 
-	// If odds have not been generated yet, generate the scale
-	if match.MatchOdds == nil {
-		// Seed rand from match name for consistency
-		hashBytes := sha1.Sum([]byte(match.Name))
-		seed := binary.BigEndian.Uint64(hashBytes[:])
-		source := rand.NewSource(int64(seed))
-		r := rand.New(source)
-		match.Scale = round.ToEven(r.Float64(), 3)
-	} else if !isRandSuccess(timeScale/1.4) || timeTo == 0 {
+	if match.MatchOdds != nil && (!isRandSuccess(timeScale/1.4) || timeTo == 0) {
 		// Only update a percentage of times or when the match has started
 		return nil
 	}
 
 	limit := math.Pow(fnMatchedLimit(match.Scale), 0.9)
-
-	match.Matched = round.AwayFromZero(timeScale*limit*exchangeRate, 1)
-
-	if match.Matched < 0 {
-		match.Matched = 0
+	amount := round.AwayFromZero(timeScale*limit*exchangeRate, 1)
+	if amount < 0 {
+		amount = 0
 	}
+
 	numOdds := fnNumOdds(timeScale+match.Scale) * 1.5
 	matchOdds := svc.GenerateOdds(bestOdds, numOdds, match.Scale, timeScale)
+
 	match.MatchOdds = &matchOdds
+	match.Matched = amount
 
 	return nil
 }

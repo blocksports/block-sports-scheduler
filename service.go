@@ -31,10 +31,13 @@ type InternalDetails struct {
 	TimeCounted   float64
 	PriceDetails  PriceData
 	SportKeys     []SportKey
+	LeagueScales  map[string]float64
 }
 
 // NewService prepares a new scheduler service
 func NewService(logger log.Logger, redisClient *redis.Client, pusherClient *pusher.Client, neoClient *neo.Client) *Service {
+	leagueScales := make(map[string]float64)
+
 	service := &Service{
 		Logger:       logger,
 		RedisClient:  redisClient,
@@ -45,6 +48,7 @@ func NewService(logger log.Logger, redisClient *redis.Client, pusherClient *push
 			TimeCounted:   0,
 			BlocksCounted: 1,
 			UpdatedAt:     time.Now(),
+			LeagueScales:  leagueScales,
 		},
 	}
 

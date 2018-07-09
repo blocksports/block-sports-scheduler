@@ -1,11 +1,13 @@
-1,99,France Ligue 1,france-ligue-1
-1,94,Premier League,england-premier-league
-1,8538,World Cup,2018-world-cup
-1,242,MLS,mls
-3,8296,Twenty-20,twenty-20
-8,1369,Super Rugby,super-rugby
-13,5657,Eastbourne 2018,eastbourne-2018
-13,5636,Eastbourne 2018,eastbourne-2018
-13,5658,Wimbledon 2018,wimbledon-2018
-16,225,MLB,mlb
-18,6290,FIBA World Cup Qualifications,fiba-world-cup-qual
+1,99,France Ligue 1,france-ligue-1,0.2
+1,94,Premier League,england-premier-league,0.7
+1,8538,World Cup,2018-world-cup,0.9
+1,242,MLS,mls,0.2
+3,8296,Twenty-20,twenty-20,0.8
+8,1369,Super Rugby,super-rugby,0.2
+13,5657,Eastbourne,eastbourne-2018,0.7
+13,5636,Eastbourne,eastbourne-2018,0.7
+13,11071,Wimbledon - Men's,wimbledon-mens-2018,0.8
+13,11072,Wimbledon - Women's,wimbledon-womens-2018,0.8
+16,225,MLB,mlb,0.5
+18,6290,FIBA World Cup Qualifications,fiba-world-cup-qual,0.4
+18,5734,NBA Summer League,nba-summer-league,0.6
