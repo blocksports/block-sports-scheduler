@@ -105,6 +105,21 @@ type Sport struct {
 	Competitions []Competition `json:"competitions"`
 }
 
+func NewSportMap() map[string]*Sport {
+	sports := make(map[string]*Sport)
+
+	for _, sport := range SportList {
+		sports[sport.Name] = &Sport{
+			ID:           sport.ID,
+			Name:         sport.Name,
+			Count:        0,
+			Competitions: []Competition{},
+		}
+	}
+
+	return sports
+}
+
 type Competition struct {
 	ID    string `json:"id"`
 	Name  string `json:"name"`
@@ -409,10 +424,10 @@ var SportList = map[string]SportInfo{
 		ID:   "rugby-union",
 		Name: "Rugby Union",
 	},
-	"9": SportInfo{
-		ID:   "boxing-ufc",
-		Name: "Boxing/UFC",
-	},
+	// "9": SportInfo{
+	// 	ID:   "boxing-ufc",
+	// 	Name: "Boxing/UFC",
+	// },
 	"12": SportInfo{
 		ID:   "american-football",
 		Name: "American Football",
@@ -433,10 +448,10 @@ var SportList = map[string]SportInfo{
 		ID:   "basketball",
 		Name: "Basketball",
 	},
-	"19": SportInfo{
-		ID:   "rugby-league",
-		Name: "Rugby League",
-	},
+	// "19": SportInfo{
+	// 	ID:   "rugby-league",
+	// 	Name: "Rugby League",
+	// },
 }
 
 // If we want to unmarshal cleanly we tag each individual sport

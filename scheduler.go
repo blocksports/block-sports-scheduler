@@ -113,7 +113,7 @@ func (svc *Service) FetchEventData() {
 	competitionMatches := make(map[string][]Match)
 
 	competitions := make(map[string]*Competition)
-	sports := make(map[string]*Sport)
+	sports := NewSportMap()
 
 	competitionOverview := make(map[string]*CompetitionInfo)
 	competitionMatched := make(map[string]float64)
@@ -280,12 +280,8 @@ func (svc *Service) FetchEventData() {
 				if _, ok := sports[sport]; ok {
 					sports[sport].Count++
 				} else {
-					sports[sport] = &Sport{
-						ID:           sportID,
-						Name:         sport,
-						Count:        1,
-						Competitions: []Competition{},
-					}
+					svc.Logger.Log("error", fmt.Sprintf("Unknown sport name: %s", sport))
+					continue
 				}
 
 				// Competition overview list
