@@ -237,7 +237,7 @@ func (svc *Service) FetchEventData() {
 				competition := leagueName
 				competitionID := leagueInternalID
 				participants := []string{event.Home.Name, event.Away.Name}
-				scale := leagueScale + addNoise(0.05)
+				scale := leagueScale + addNoise(0.075)
 				numOutcomes := 3
 				if !hasDraw {
 					numOutcomes = 2
