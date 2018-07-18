@@ -1,10 +1,10 @@
 1,99,France Ligue 1,france-ligue-1,0.2
 1,94,Premier League,english-premier-league,0.65
 1,242,MLS,mls,0.27
-1,1040,UEFA Champions League,uefa-champions-league,0.53
-1,5708,UEFA Champions League,uefa-champions-league,0.43
-1,1067,UEFA Europa League,uefa-europa-league,0.55
-1,5720,UEFA Europa League,uefa-europa-league,0.45
+1,1040,Champions League,uefa-champions-league,0.57
+1,5708,Champions League,uefa-champions-league,0.47
+1,1067,Europa League,uefa-europa-league,0.48
+1,5720,Europa League,uefa-europa-league,0.44
 3,8296,Twenty-20,twenty-20,0.7
 3,8304,Test Matches,test-matches-2018,0.68
 3,8409,Test Matches,test-matches-2018,0.68
@@ -15,6 +15,7 @@
 12,459,NFL,nfl-2018,0.43
 13,6005,San Benedetto Challenger,san-benedetto-challenger-2018,0.6
 13,6010,ATP Bastad,atp-bastad,0.45
+13,11274,ATP Bastad,atp-bastad,0.48
 13,5978,WTA Gstaad,wta-gstaad,0.25
 16,225,MLB,mlb,0.45
 18,6290,FIBA World Cup Qualifications,fiba-world-cup-qual,0.4
