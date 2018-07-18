@@ -100,9 +100,6 @@ func (svc *Service) FetchPriceData() {
 
 }
 
-var a_wg = 0
-var b_wg = 0
-
 func (svc *Service) FetchEventData() {
 	var wg sync.WaitGroup
 
@@ -230,6 +227,8 @@ func (svc *Service) FetchEventData() {
 					return
 				}
 
+				svc.Logger.Log("test", "a")
+
 				// Set up match details
 				name := event.Home.Name + string("_") + event.Away.Name
 				sport := SportList[sportID].Name
@@ -237,7 +236,7 @@ func (svc *Service) FetchEventData() {
 				competition := leagueName
 				competitionID := leagueInternalID
 				participants := []string{event.Home.Name, event.Away.Name}
-				scale := leagueScale + addNoise(0.05)
+				scale := leagueScale + addNoise(0.75)
 				numOutcomes := 3
 				if !hasDraw {
 					numOutcomes = 2
@@ -350,6 +349,7 @@ func (svc *Service) FetchEventData() {
 	err = svc.SetRedis("all-matches", &matches)
 	if err != nil {
 		svc.Logger.Log("error", err.Error())
+		_ = WriteDataToJSONFile("matches", matches)
 		return
 	}
 

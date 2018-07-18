@@ -121,7 +121,7 @@ func FindBestOdds(match Match) BestOdds {
 // UpdateMatchData generates odds and matched amounts based on the current best odds, randomness and ~maths~
 func (svc *Service) UpdateMatchData(bestOdds BestOdds, match *Match) error {
 	exchangeRate := svc.Internals.PriceDetails.ExchangeRate
-	fnTimeScale := makeSigmoidal([4]float64{1, 0.2851116, 96440480000, -19.12504})                // Grows to 1 as x -> 0
+	fnTimeScale := makeSigmoidal([4]float64{0.9968527, 0.2166688, 71743450000, -8.774069})        // Grows to 1 as x -> 0
 	fnMatchedLimit := makeExponential([4]float64{373247800000000000, 7.202931, 0.9016243, -5068}) // Grows to 2e7 as x -> 1
 	fnNumOdds := makeLogistical([4]float64{9.9308, -3.0139, 10.8597, -1.5})
 
@@ -136,7 +136,7 @@ func (svc *Service) UpdateMatchData(bestOdds BestOdds, match *Match) error {
 	}
 	timeScale := fnTimeScale(float64(timeTo))
 
-	if match.MatchOdds != nil && (!isRandSuccess(timeScale/1.4) || timeTo == 0) {
+	if match.MatchOdds != nil && (!isRandSuccess(timeScale) || timeTo == 0) {
 		// Only update a percentage of times or when the match has started
 		return nil
 	}
