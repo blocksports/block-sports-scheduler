@@ -449,8 +449,8 @@ var SportList = map[string]SportInfo{
 		Name: "Basketball",
 	},
 	"30": SportInfo{
-		ID:   "e-sports",
-		Name: "E-Sports",
+		ID:   "esports",
+		Name: "eSports",
 	},
 	// "19": SportInfo{
 	// 	ID:   "rugby-league",
